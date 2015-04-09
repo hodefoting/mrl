@@ -38,21 +38,16 @@ end
 local Mrg = require('mrg')
 local mrg = Mrg.new(512, 512);
 
-local state={path='/home/pippin/src/mrg/README.md',folder='/home/pippin/src/mrg',query=''}
+local state={
+  path      ='/home/pippin/src/mrg/README.md',
+  folder    ='/home/pippin/src/mrg',
+  query     ='',
+  child_focus = false,
+  folder_pan=0
+}
 
---local path = '/home/pippin/src/mrg/lua'
---
-local folder;
-local query = ''
-local path = '/home/pippin/images'
-
-local folder_pan = 0;
 local dir = {}
-
-local child_focus = false
-
 local comp_dir = "/tmp/mrg-" .. S.getpid()
-
 
 local host = mrg:host_new(comp_dir)
 
@@ -103,15 +98,15 @@ end
 local current_child_path = nil
 
 function dispatch_bin (handler)
-  if current_child_path == path then
+  if current_child_path == state.path then
     return
   end
-  current_child_path = path
+  current_child_path = state.path
   cleanup_child()
   mrg:add_timeout(1, function() mrg:queue_draw(nil) return 0 end)
   local childpid = S.fork()
   if (childpid == 0) then    -- in child
-    S.execve(which(handler.child), {which(handler.child), path}, {"PATH=" .. S.getenv('PATH'), "MMM_PATH=" .. comp_dir})
+    S.execve(which(handler.child), {which(handler.child), state.path}, {"PATH=" .. S.getenv('PATH'), "MMM_PATH=" .. comp_dir})
     S.exit()
   else                       -- in parent
     old_pid = childpid
@@ -235,6 +230,11 @@ end
 function serialize (o)
   if type(o)     == "number" then return o
   elseif type(o) == "nil" then return "nil"
+  elseif type(o) == "boolean" then
+    if o == true then
+      return "true" else
+      return "false"
+    end
   elseif type(o) == "string" then return string.format("%q", o)
   elseif type(o) == "table" then
     local ret = "{"
@@ -250,35 +250,20 @@ end
 
 function store_state()
   S.setenv("MRL_STATE", serialize(state))
-  -- the state of the browser is small enough to contain in environment
-  -- variables, which is good enough for live-coding
-  S.setenv("BROWSER_PATH", path, 1)
-  S.setenv("FOLDER_PAN", ''.. folder_pan, 1)
-  S.setenv("QUERY", ''.. query, 1)
 end
 
 function restore_state()
   if (S.getenv("MRL_STATE")) then
     state = loadstring('return ' .. S.getenv("MRL_STATE"))()
   end
-  if (S.getenv("BROWSER_PATH")) then
-    path = S.getenv("BROWSER_PATH")
-  end
-  if (S.getenv("FOLDER_PAN")) then
-    folder_pan = tonumber (S.getenv("FOLDER_PAN"))
-  end
-  if (S.getenv("QUERY")) then
-    query = S.getenv("QUERY")
-  end
 end
 
 if (#arg >= 1) then
-  path = arg[1]
+  state.path = arg[1]
 end
 
 restore_state()
 
---local path = '/home/pippin/images'
 local io  = require('io')
 
 local css = [[
@@ -304,21 +289,20 @@ function get_parent(path)
   for i = 1,#t-1 do
     newp = newp .. '/' .. t[i]
   end
-  path = newp
   if newp == '' then newp = '/' end
   return newp
 end
 
 function go_parent()
-  path = get_parent (path)
+  set_path (get_parent (state.path))
   mrg:queue_draw(null)
 end
 
 function go_next()
   local cursor = nil
   for i,file in pairs(dir) do
-    if cursor and cursor.path == path then
-      path = file.path
+    if cursor and cursor.path == state.path then
+      set_path (file.path)
       mrg:queue_draw(null)
       return
     end
@@ -329,9 +313,9 @@ end
 function go_previous()
   local cursor = nil
   for i,file in pairs(dir) do
-    if file.path == path then
+    if file.path == state.path then
       if cursor then
-        path = cursor.path
+        set_path (cursor.path)
         mrg:queue_draw(null)
       end
       return
@@ -343,30 +327,31 @@ end
 local editing_path = false
 
 function set_path(new_path)
-  path = new_path
+  state.path = new_path
   mrg:queue_draw(null)
   mrg:set_title(new_path)
-  store_state()
 
-  local old_folder = folder
+  local old_folder = state.folder
 
-  local stat = S.stat(path)
+  local stat = S.stat(state.path)
   if stat and stat.isdir then
     editing_path = true
-    folder = path
+    state.folder = state.path
   else
     editing_path = true
-    folder = get_parent(path)
+    state.folder = get_parent(state.path)
   end
 
-  if folder ~= old_folder then
-    query=''
+  if state.folder ~= old_folder then
+    state.query=''
   else
   end
-    mrg:set_cursor_pos(#query)
+    mrg:set_cursor_pos(#state.query)
+
+  store_state(state)
 end
 
-set_path (path)
+set_path (state.path)
 
 function path_bar(mrg)
   local cr = mrg:cr()
@@ -386,9 +371,9 @@ function path_bar(mrg)
   local sep = '';
 
   local count = 0
-  for str in string.gmatch(folder, "([^/]+)") do count = count + 1 end
+  for str in string.gmatch(state.folder, "([^/]+)") do count = count + 1 end
   local i = 1
-  for str in string.gmatch(folder, "([^/]+)") do
+  for str in string.gmatch(state.folder, "([^/]+)") do
     local foo = newp .. '/' .. str
     newp = foo
     mrg:text_listen(Mrg.PRESS,
@@ -405,14 +390,14 @@ function path_bar(mrg)
     i = i + 1
   end
 
-  if not child_focus then
+  if not state.child_focus then
   mrg:edit_start(function(new) 
-    query=new
+    state.query=new
   end)
-  mrg:print(query)
+  mrg:print(state.query)
   mrg:edit_end()
   else
-  mrg:print(query)
+  mrg:print(state.query)
   end
 
   mrg:close()
@@ -488,10 +473,10 @@ function draw_folder(mrg, path, currpath, details)
     local cr = mrg:cr()
 
     cr:save()
-    cr:translate (0, folder_pan)
+    cr:translate (0, state.folder_pan)
     mrg:start('div.folder')
 
-    dir = collect_dir (path, query)
+    dir = collect_dir (path, state.query)
 
     for i,file in pairs(dir) do
 
@@ -561,7 +546,7 @@ function draw_folder(mrg, path, currpath, details)
       mrg:print_xml(xml)
       mrg:text_listen_done()
 
-      if mrg:y() + folder_pan > mrg:height() then break end
+      if mrg:y() + state.folder_pan > mrg:height() then break end
     end
     mrg:close()
     cr:restore()
@@ -569,7 +554,7 @@ end
 
 function draw_image (mrg, x, y)
   local em = mrg:em()
-  local w, h = mrg:image_size(path)
+  local w, h = mrg:image_size(state.path)
   local cr = mrg:cr()
   local scale = 1.0;
   local dw, dh;
@@ -589,7 +574,7 @@ function draw_image (mrg, x, y)
               (y + ((mrg:height()-y) - dh)/2))
   cr:rectangle(0, 0, mrg:width() - 8 * em, mrg:height() - y)
   cr:clip()
-  mrg:image(0, 0, dw, dh, path)
+  mrg:image(0, 0, dw, dh, state.path)
   cr:restore()
 end
 
@@ -597,7 +582,7 @@ function draw_info (mrg, x, y)
   local em = mrg:em()
   local cr = mrg:cr()
   cleanup_child()
-  local info = os.capture('file "' .. path ..'"') .. '\n' .. os.capture('ls -la "' .. path .. '"')
+  local info = os.capture('file "' .. state.path ..'"') .. '\n' .. os.capture('ls -la "' .. path .. '"')
   mrg:print_xml ("<pre class='content' style='border:2px solid black;padding:0.4em;'>".. info .. "</pre> ")
 end
 
@@ -613,7 +598,7 @@ function (mrg, data)
   local cr = mrg:cr()
   local em = mrg:em()
 
-  local stat = S.stat(path)
+  local stat = S.stat(state.path)
   local x, y = 0, 0
 
   if not stat then
@@ -623,11 +608,11 @@ function (mrg, data)
       x, y = mrg:xy()
   
       cleanup_child()
-      draw_folder(mrg, path, undefined, true)
+      draw_folder(mrg, state.path, undefined, true)
 
       cr:rectangle(0, y, mrg:width(), mrg:height())
       mrg:listen(Mrg.DRAG, function(ev)
-         folder_pan = folder_pan + ev.delta_y
+         state.folder_pan = state.folder_pan + ev.delta_y
          mrg:queue_draw(null)
       end)
       cr:new_path()
@@ -637,21 +622,19 @@ function (mrg, data)
     elseif stat.isreg then
 
       x, y = mrg:xy()
-      draw_folder(mrg, get_parent(path), path, false)
-
+      draw_folder(mrg, state.folder, state.path, false)
 
       mrg:set_edge_right(mrg:width() - em)
       mrg:set_edge_left(8 * em)
       mrg:set_edge_top(y)
 
-      local mime_type = path_get_mime_type(path)
+      local mime_type = path_get_mime_type(state.path)
       local handler = mime_handler[mime_type]
-
       handler.dispatch(handler)
 
       cr:rectangle(0, y, 8 * mrg:em(), mrg:height())
       mrg:listen(Mrg.DRAG, function(ev)
-         folder_pan = folder_pan + ev.delta_y
+         state.folder_pan = state.folder_pan + ev.delta_y
          mrg:queue_draw(null)
       end)
       cr:new_path()
@@ -662,13 +645,15 @@ function (mrg, data)
 
       mrg:set_xy(0,0)
       path_bar(mrg)
-
     end
   end
 
-  mrg:add_binding("tab", NULL, NULL, function (event) child_focus = not child_focus mrg:queue_draw(nil) end )
+  mrg:add_binding("tab", NULL, NULL, function (event)
+    state.child_focus = not state.child_focus
+    mrg:queue_draw(nil)
+  end )
   mrg:add_binding("control-q", NULL, NULL, function (event) mrg:quit() end)
-  if not child_focus then
+  if not state.child_focus then
     mrg:add_binding("alt-left",      NULL, NULL, function (event)
         go_parent()
        event:stop_propagate()
@@ -683,42 +668,42 @@ function (mrg, data)
        event:stop_propagate()
     end)
     mrg:add_binding("escape",    NULL, NULL, function (event)
-      if query == '' then
+      if state.query == '' then
        go_parent()
        event:stop_propagate()
       end
     end)
     mrg:add_binding("/",    NULL, NULL, function (event)
-      local stat=S.stat(folder .. '/' ..query)
+      local stat=S.stat(state.folder .. '/' .. state.query)
       if stat and stat.isdir then
-        set_path(folder .. '/' .. query)
+        set_path(state.folder .. '/' .. state.query)
       end
       event:stop_propagate()
     end)
     mrg:add_binding("tab", NULL, NULL, function (event)
       local matches={}
       for i,file in pairs(dir) do
-        if string.has_prefix(file.name, query) then
+        if string.has_prefix(file.name, state.query) then
           table.insert(matches, file)
         end
       end
 
       if #matches == 0 then
       elseif #matches == 1 then
-        set_path(folder .. '/' .. matches[1].name)
+        set_path(state.folder .. '/' .. matches[1].name)
       else
       end
 
       event:stop_propagate()
     end)
     mrg:add_binding("backspace",    NULL, NULL, function (event)
-      if query == '' then
-        local tmp = string.match(folder, "([^/]+)$")
-        set_path(get_parent(folder))
-        query=tmp
+      if state.query == '' then
+        local tmp = string.match(state.folder, "([^/]+)$")
+        set_path(get_parent(state.folder))
+        state.query=tmp
 
         -- not sure why this needs to go in a timeout
-        mrg:add_timeout(0, function() mrg:set_cursor_pos(#query) return 0 end)
+        mrg:add_timeout(0, function() mrg:set_cursor_pos(#state.query) return 0 end)
       end
     end)
   end
@@ -734,19 +719,14 @@ function (mrg, data)
     client:set_size(mrg:width()-(8 * mrg:em()), mrg:height()-y)
   end
 
-  if child_focus then
+  if state.child_focus then
     cr:rectangle(0,0, 8 * em, mrg:height())
-    mrg:listen(Mrg.PRESS, function(event) child_focus = false end)
+    mrg:listen(Mrg.PRESS, function(event) state.child_focus = false end)
     cr:new_path()
-
     host:register_events()
   else
-    --cr:rectangle(0,0, 8 * em, mrg:height())
-    --cr:set_source_rgba(1,0,0,0.1)
-    --cr:fill()
-
     cr:rectangle(8 * em, y, mrg:width() - 9 * em, mrg:height() - y)
-    mrg:listen(Mrg.PRESS, function(event) child_focus = true  end)
+    mrg:listen(Mrg.PRESS, function(event) state.child_focus = true  end)
     cr:new_path()
   end
 
