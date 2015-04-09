@@ -1,0 +1,36 @@
+#!/usr/bin/env luajit
+
+local Mrg    = require('mrg')
+local io     = require('io')
+local mrg    = Mrg.new(-1, -1);
+
+function os.capture(cmd, raw)
+  local f = assert(io.popen(cmd, 'r'))
+  local s = assert(f:read('*a'))
+  f:close()
+  if raw then return s end
+  s = string.gsub(s, '^%s+', '')
+  s = string.gsub(s, '%s+$', '')
+  s = string.gsub(s, '[\n\r]+', ' ')
+  return s
+end
+
+
+local path
+local document=''
+
+if (#arg >= 1) then
+  path = arg[1]
+  io.input(path)
+  document = io.read("*all")
+end
+
+mrg:set_ui(
+function (mrg, data)
+
+  mrg:print_xml(document)
+
+  mrg:add_binding("control-q", NULL, NULL, function () mrg:quit() end)
+end)
+
+mrg:main()

@@ -1,31 +1,18 @@
 #!/usr/bin/env luajit
 -- todo
---   creating new files
+--   creating new (text) files
 --   text editing
 --     mark modified and unsaved files in file browser, keep clients open, permitting multitask editing with minimal ui.
 --     ask to save changes when trying to switch file or perhaps dir?
 --   open context menu with keyboard shortcut
---   svg viewing/editing 
 --   escape paths
---   ffmpeg video recorder in mmm host -> gif animation
---   ffplay video playback
---   named key/value strings on mmm?
-
---   image zoom/pan with gestures
---   gegl based helper for images
 --   thumbnails
-
--- ok so if I now add better focus, and onscreen keyboard to browse.lua it is the minimal needed, with no extra windowmanager. it is a single tasking solution. after that on the meta level multiple tasks tiled will be added.
-
---   cache dir array between draws, with identify info as well
 
 -- stick a .mrg file in each dir
 -- containing per filename extra information/cache
 -- order for custom order sort (useful for slideshows and playlists)
 -- position and size/rotation for 2d-view
 -- use hardlinks when copying .jpg or .png or .mp3 files on the same file system,..
-
--- enter text for rename, first in a global blocking query..
 
 local S = require('syscall')
 
@@ -84,6 +71,12 @@ function path_get_mime_type(path)
    elseif path:has_suffix(".png") or 
       path:has_suffix(".PNG") then
       return "image/png"
+   elseif path:has_suffix(".svg") or 
+      path:has_suffix(".SVG") then
+      return "image/svg"
+   elseif path:has_suffix(".html") or 
+      path:has_suffix(".HTML") then
+      return "text/html"
    elseif path:has_suffix(".jpg") or
             path:has_suffix(".jpeg") or
             path:has_suffix(".JPEG") or
@@ -94,6 +87,8 @@ function path_get_mime_type(path)
       path:has_suffix(".txt") or
       path:has_suffix("Makefile") or
       path:has_suffix('.c') or 
+      path:has_suffix('.h') or 
+      path:has_suffix('.css') or 
       path:has_suffix(".lua") then
       return "text/plain"
    end
@@ -138,6 +133,8 @@ function dispatch_child (handler)
 end
 
 function internal_image (handler)
+  -- for large images, external is better anyways,.
+  -- keeping the code for comparison purposes
   local em = mrg:em()
   local w, h = mrg:image_size(state.path)
   local cr = mrg:cr()
@@ -613,10 +610,12 @@ function (mrg, data)
       local mime_type = path_get_mime_type(state.path)
       local handler = mime_handler[mime_type]
 
+      if handler then
       if handler.cb then
         handler.cb(handler)
       else
         dispatch_child (handler)
+      end
       end
 
       cr:rectangle(0, y, 8 * mrg:em(), mrg:height())
@@ -741,6 +740,8 @@ mime_handler['unknown']    = {execute='mrl-file-info'}
 
 mime_handler['image/jpeg']  = {execute='mrl-image-view'}
 mime_handler['image/png']   = {execute='mrl-image-view'}
+mime_handler['image/svg']   = {execute='mrl-svg-view'}
+mime_handler['text/html']   = {execute='mrl-html-view'}
 
 if false then
   mime_handler['image/jpeg'] = {cb=internal_image}
@@ -748,5 +749,6 @@ if false then
 end
 
 mrg:main()
+cleanup_child()
 host:destroy()
 
