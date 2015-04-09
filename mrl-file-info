@@ -3,7 +3,7 @@
 local Mrg    = require('mrg')
 local mrg    = Mrg.new(-1, -1);
 
-local path = '/home/pippin/pippin.jpg'
+local path
 
 if (#arg >= 1) then
   path = arg[1]
@@ -11,19 +11,8 @@ end
 
 mrg:set_ui(
 function (mrg, data)
-  local cr = mrg:cr()
-  local em = mrg:em()
-  local w, h = mrg:image_size(path)
-  local cr = mrg:cr()
-  local scale = 1.0;
-
   mrg:print(path)
-
-  mrg:add_binding("control-q", NULL, NULL,
-    function ()
-      mrg:quit()
-    end)
+  mrg:add_binding("control-q", NULL, NULL, function () mrg:quit() end)
 end)
 
-mrg:set_title(path)
 mrg:main()
