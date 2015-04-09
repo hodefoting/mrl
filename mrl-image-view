@@ -39,6 +39,19 @@ function (mrg, data)
     function ()
       mrg:quit()
     end)
+
+  mrg:add_binding("down", NULL, NULL,
+    function ()
+      mrg:message('next')
+      mrg:add_timeout(0,mrg:queue_draw(nil))
+    end)
+  mrg:add_binding("up", NULL, NULL,
+    function ()
+      --mrg:message('previous')
+      mrg:message('fnord')
+      mrg:add_timeout(0,mrg:queue_draw(nil))
+    end)
+
 end)
 
 mrg:set_title(path)

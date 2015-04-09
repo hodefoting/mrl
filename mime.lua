@@ -1,7 +1,13 @@
 local M = {}
 
+-- the api is possible to replace with something
+-- that sniffs magic, this is the simplest thing
+-- that almost works though
+
 function M.for_path(path)
-   if path:has_suffix(".gif") or
+   if path:has_prefix("/proc/") then
+     return "text/plain"
+   elseif path:has_suffix(".gif") or
       path:has_suffix(".GIF") then
      return "image/gif";
    elseif path:has_suffix(".png") or 
@@ -25,6 +31,7 @@ function M.for_path(path)
       path:has_suffix("Makefile.am") or
       path:has_suffix("configure") or
       path:has_suffix('.c') or 
+      path:has_suffix('.js') or 
       path:has_suffix('.md') or 
       path:has_suffix('.pc') or 
       path:has_suffix('.inc') or 
@@ -33,6 +40,17 @@ function M.for_path(path)
       path:has_suffix(".lua") then
       return "text/plain"
    end
+
+
+  io.input(path)
+  document = io.read("*line")
+  io.close()
+
+  if document and document:match('lua') then
+      return "text/plain"
+  end
+
+
    return "unknown"
 end
 

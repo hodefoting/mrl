@@ -50,7 +50,7 @@ document {font-size: 20px; }
 /* .folder {border: 1px solid red; } */
 .dentry {color:blue} 
 /* .entry  {border: 1px solid green; } */
-#current { background: yellow; }
+#current { border: 2px solid green; background: blue; }
 .content {color: blue ; background: white; }
 .size { width: 5em; display: block; float: left; }
 .size_unit { color: gray }
@@ -139,8 +139,6 @@ end
 
 restore_state()
 
-local io  = require('io')
-
 function get_parent(path)
   local t = {}
   local newp = '';
@@ -205,11 +203,11 @@ function set_path(new_path)
 
   if state.folder ~= old_folder then
     state.query=''
+    state.folder_pan = 0
   else
   end
     mrg:set_cursor_pos(#state.query)
 
-  state.folder_pan = 0
   store_state(state)
 end
 
@@ -253,23 +251,22 @@ function path_bar(mrg)
   end
 
   if not state.child_focus then
-  mrg:edit_start(function(new) 
-    state.query=new
-  end)
-  mrg:print(state.query)
-  mrg:edit_end()
+    mrg:edit_start(function(new) 
+      state.query=new
+    end)
+    mrg:print(state.query)
+    mrg:edit_end()
   else
-  mrg:print(state.query)
+    mrg:print(state.query)
   end
 
   mrg:close()
 end
 
 function collect_dir (path, query)
-    --local fd = S.open(path, "directory, rdonly")
     local dir = {}
     local hide_dot = true
-    for name in S.util.ls(path) do --fd:getdents() do
+    for name in S.util.ls(path) do
        if name ~= '..' and name ~= '.' then
          local combined_path = path .. '/' .. name
          local file = {}
@@ -386,13 +383,11 @@ function draw_folder(mrg, path, currpath, details)
       end
       xml = xml .. "><span class='fname'>" .. file.name .. "</span>"
       if details then
-          if file.isdir then
-          else
-            --xml = xml .. "<span class='size'>" .. id .. human_size(file.size) .. "</span>"
+          if not file.isdir then
             xml = xml .. "<span class='size'>" .. human_size(file.size) .. "</span>"
           end
        end
-      xml = xml .. "</div>\n "
+      xml = xml .. "</div>\n"
       mrg:print_xml(xml)
       mrg:text_listen_done()
 
@@ -442,11 +437,11 @@ function (mrg, data)
       local handler = mime_handler[mime_type]
 
       if handler then
-      if handler.cb then
-        handler.cb(handler)
-      else
-        dispatch_child (handler)
-      end
+        if handler.cb then
+          handler.cb(handler)
+        else
+          dispatch_child (handler)
+        end
       end
 
       cr:rectangle(0, y, 8 * mrg:em(), mrg:height())
@@ -537,7 +532,7 @@ function (mrg, data)
       end
       event:stop_propagate()
     end)
-    mrg:add_binding("backspace",    NULL, NULL, function (event)
+    mrg:add_binding("backspace", NULL, NULL, function (event)
       if state.query == '' and state.path ~= '/' then
         local tmp = string.match(state.folder, "([^/]+)$")
         set_path(get_parent(state.folder))
@@ -558,6 +553,22 @@ function (mrg, data)
     client:render(mrg, 8 * mrg:em(), y)
     client:set_xy(8 * mrg:em(), y)
     client:set_size(mrg:width()-(8 * mrg:em()), mrg:height()-y)
+
+    if client:has_message() ~= 0 then
+      local message = client:get_message()
+
+      -- by having the all target, the compositor acts as a bus
+      -- and it is up to the clients to know that they are targetd
+
+      if message == 'next' then
+        go_next()
+      elseif message == 'previous' then
+        go_previous()
+      else
+        mrg:message('unhandled client message : ' .. message)
+      end
+    end
+
   end
 
   if state.child_focus then
@@ -581,11 +592,8 @@ function (mrg, data)
     end
 
   end)
-
 end)
 
-mrg:css_set(css)
-restore_state()
 
 mime_handler['text/plain'] = {execute='mrl-text-editor'}
 mime_handler['image/gif']  = {execute='mmm-gifplay', options='--loop=1000'}
@@ -600,6 +608,9 @@ if false then
   mime_handler['image/jpeg'] = {cb=internal_image}
   mime_handler['image/png']  = {cb=internal_image}
 end
+
+mrg:css_set(css)
+restore_state()
 
 mrg:main()
 cleanup_child()
