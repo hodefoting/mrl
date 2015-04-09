@@ -86,7 +86,12 @@ function path_get_mime_type(path)
    elseif path:has_suffix("README") or 
       path:has_suffix(".txt") or
       path:has_suffix("Makefile") or
+      path:has_suffix("Makefile.am") or
+      path:has_suffix("configure") or
       path:has_suffix('.c') or 
+      path:has_suffix('.md') or 
+      path:has_suffix('.pc') or 
+      path:has_suffix('.inc') or 
       path:has_suffix('.h') or 
       path:has_suffix('.css') or 
       path:has_suffix(".lua") then
@@ -450,7 +455,7 @@ function collect_dir (path, query)
            if query == '' then
              table.insert(dir, file) 
            else
-             if string.match(file.name, query) then
+             if string.match(file.name, '^' .. query) then
                table.insert(dir, file)
              end
            end
@@ -634,10 +639,12 @@ function (mrg, data)
     end
   end
 
+  --[[
   mrg:add_binding("tab", NULL, NULL, function (event)
     state.child_focus = not state.child_focus
     mrg:queue_draw(nil)
   end )
+  ]]
   mrg:add_binding("control-q", NULL, NULL, function (event) mrg:quit() end)
   if not state.child_focus then
     mrg:add_binding("alt-left",      NULL, NULL, function (event)
@@ -678,8 +685,25 @@ function (mrg, data)
       elseif #matches == 1 then
         set_path(state.folder .. '/' .. matches[1].name)
       else
-      end
+        local common=0
+        local done = false
 
+        while not done do
+          local first = matches[1].name:byte(common+1)
+          
+          for i,v in pairs(matches) do
+            if v.name:byte(common+1) ~= first then
+              done = true
+            end
+          end
+          if not done then
+            common = common + 1
+          end
+        end
+        state.query=matches[1].name:sub(1, common)
+        print(state.query)
+        mrg:add_timeout(0, function() mrg:set_cursor_pos(#state.query) return 0 end)
+      end
       event:stop_propagate()
     end)
     mrg:add_binding("backspace",    NULL, NULL, function (event)
