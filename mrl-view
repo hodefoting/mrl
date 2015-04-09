@@ -38,6 +38,9 @@ end
 local Mrg = require('mrg')
 local mrg = Mrg.new(512, 512);
 
+local mime_handler = {} -- go to the bottom of the file to see the list of mimehandlers
+
+
 local state={
   path      ='/home/pippin/src/mrg/README.md',
   folder    ='/home/pippin/src/mrg',
@@ -52,6 +55,20 @@ local comp_dir = "/tmp/mrg-" .. S.getpid()
 local host = mrg:host_new(comp_dir)
 
 S.setenv("MMM_PATH","/tmp/mrg",1)
+
+local css = [[
+.pathbar { background: white; }
+document {font-size: 20px; }
+/* .folder {border: 1px solid red; } */
+.dentry {color:blue} 
+/* .entry  {border: 1px solid green; } */
+#current { background: yellow; }
+.content {color: blue ; background: white; }
+.size { width: 5em; display: block; float: left; }
+.size_unit { color: gray }
+.fname { display: block; float: left; width: 80%; }
+]]
+
 
 ------------------------------------------------------------------------
 
@@ -83,9 +100,7 @@ function path_get_mime_type(path)
    return "unknown"
 end
 
-
 local old_pid = 0
-
 function cleanup_child()
   if old_pid ~= 0 then
     S.kill(old_pid, 9)
@@ -96,31 +111,58 @@ function cleanup_child()
 end
 
 local current_child_path = nil
-
-function dispatch_bin (handler)
+function dispatch_child (handler)
   if current_child_path == state.path then
     return
   end
   current_child_path = state.path
   cleanup_child()
-  mrg:add_timeout(1, function() mrg:queue_draw(nil) return 0 end)
+  mrg:add_timeout(0, function() mrg:queue_draw(nil) return 0 end)
   local childpid = S.fork()
   if (childpid == 0) then    -- in child
-    S.execve(which(handler.child), {which(handler.child), state.path}, {"PATH=" .. S.getenv('PATH'), "MMM_PATH=" .. comp_dir})
+    if handler.options then
+      S.execve(which(handler.execute),
+               {which(handler.execute), state.path, handler.options},
+               {"PATH=" .. S.getenv('PATH'),
+                "MMM_PATH=" .. comp_dir})
+    else
+      S.execve(which(handler.execute), {which(handler.execute), state.path},
+               {"PATH=" .. S.getenv('PATH'),
+                "MMM_PATH=" .. comp_dir})
+    end
     S.exit()
   else                       -- in parent
     old_pid = childpid
     S.nanosleep(0.1) -- XXX: eeek, avoiding construction race... needs fixing in mmm
   end
-
 end
 
-local mime_handler = {}
-mime_handler['text/plain'] = {child='mrl-text-editor',  dispatch=dispatch_bin}
-mime_handler['image/png']  = {child='mrl-image-view',   dispatch=dispatch_bin}
-mime_handler['image/jpeg'] = {child='mrl-image-view',   dispatch=dispatch_bin}
-mime_handler['image/gif']  = {child='mmm-gifplay',      dispatch=dispatch_bin}
-mime_handler['unknown']    = {child='mrl-file-info',    dispatch=dispatch_bin}
+function internal_image (handler)
+  local em = mrg:em()
+  local w, h = mrg:image_size(state.path)
+  local cr = mrg:cr()
+  local scale = 1.0;
+  local dw, dh;
+  local y = 40
+  cleanup_child()
+  scale = (mrg:width () - 8 * em) / w
+  dw, dh = w * scale, h * scale
+  if dw > mrg:width() - 8 * em then
+    scale = (mrg:width () - 8 * em) / w
+    dw, dh = w * scale, h * scale
+  end
+  if dh > mrg:height() - y then
+    scale = (mrg:height() - y) / h
+    dw, dh = w * scale, h * scale
+  end
+  cr:save()
+  cr:translate(8*em + ((mrg:width()-8 * em) - dw)/2, 
+              (y + ((mrg:height()-y) - dh)/2))
+  cr:rectangle(0, 0, mrg:width() - 8 * em, mrg:height() - y)
+  cr:clip()
+  mrg:image(0, 0, dw, dh, state.path)
+  cr:restore()
+end
 
 function which(command)
   local ret = ''
@@ -139,17 +181,15 @@ function mrg_modal(mrg, x, y, choices)
   if choices then
     modal_choices = choices
   else
-    modal_choices = {
-      {title='uh??'}
-    }
+    modal_choices = {}
   end
   local w, h = 100, 100
   if x < w/2 then x = w/2 end
   if y < h/2 then y = h/2 end
   if x > mrg:width()  - w/2 then x = mrg:width ()-w/2 end
   if y > mrg:height() - h/2 then y = mrg:height()-h/2 end
-  modal_x = x
-  modal_y = y
+  modal_x  = x
+  modal_y  = y
   in_modal = true
   modal_string = nil
   mrg:set_cursor_pos(0)
@@ -249,7 +289,11 @@ function serialize (o)
 end
 
 function store_state()
-  S.setenv("MRL_STATE", serialize(state))
+  S.setenv("MRL_STATE", serialize(state), 1)
+end
+
+if (#arg >= 1) then
+  state.path = arg[1]
 end
 
 function restore_state()
@@ -258,26 +302,9 @@ function restore_state()
   end
 end
 
-if (#arg >= 1) then
-  state.path = arg[1]
-end
-
 restore_state()
 
 local io  = require('io')
-
-local css = [[
-.pathbar { background: white; }
-document {font-size: 20px; }
-/* .folder {border: 1px solid red; } */
-.dentry {color:blue} 
-/* .entry  {border: 1px solid green; } */
-#current { background: yellow; }
-.content {color: blue ; background: white; }
-.size { width: 5em; display: block; float: left; }
-.size_unit { color: gray }
-.fname { display: block; float: left; width: 80%; }
-]]
 
 
 function get_parent(path)
@@ -458,17 +485,6 @@ function human_size(size)
   end
 end
 
-function os.capture(cmd, raw)
-  local f = assert(io.popen(cmd, 'r'))
-  local s = assert(f:read('*a'))
-  f:close()
-  if raw then return s end
-  s = string.gsub(s, '^%s+', '')
-  s = string.gsub(s, '%s+$', '')
-  s = string.gsub(s, '[\n\r]+', ' ')
-  return s
-end
-
 function draw_folder(mrg, path, currpath, details)
     local cr = mrg:cr()
 
@@ -537,7 +553,6 @@ function draw_folder(mrg, path, currpath, details)
       if details then
           if file.isdir then
           else
-            --local id = os.capture('file ' .. file.path .. ' | cut -f 2 -d ":" ')
             --xml = xml .. "<span class='size'>" .. id .. human_size(file.size) .. "</span>"
             xml = xml .. "<span class='size'>" .. human_size(file.size) .. "</span>"
           end
@@ -552,39 +567,6 @@ function draw_folder(mrg, path, currpath, details)
     cr:restore()
 end
 
-function draw_image (mrg, x, y)
-  local em = mrg:em()
-  local w, h = mrg:image_size(state.path)
-  local cr = mrg:cr()
-  local scale = 1.0;
-  local dw, dh;
-  cleanup_child()
-  scale = (mrg:width () - 8 * em) / w
-  dw, dh = w * scale, h * scale
-  if dw > mrg:width() - 8 * em then
-    scale = (mrg:width () - 8 * em) / w
-    dw, dh = w * scale, h * scale
-  end
-  if dh > mrg:height() - y then
-    scale = (mrg:height() - y) / h
-    dw, dh = w * scale, h * scale
-  end
-  cr:save()
-  cr:translate(8*em + ((mrg:width()-8 * em) - dw)/2, 
-              (y + ((mrg:height()-y) - dh)/2))
-  cr:rectangle(0, 0, mrg:width() - 8 * em, mrg:height() - y)
-  cr:clip()
-  mrg:image(0, 0, dw, dh, state.path)
-  cr:restore()
-end
-
-function draw_info (mrg, x, y)
-  local em = mrg:em()
-  local cr = mrg:cr()
-  cleanup_child()
-  local info = os.capture('file "' .. state.path ..'"') .. '\n' .. os.capture('ls -la "' .. path .. '"')
-  mrg:print_xml ("<pre class='content' style='border:2px solid black;padding:0.4em;'>".. info .. "</pre> ")
-end
 
 function string.has_suffix(String,End)
    return End=='' or string.sub(String,-string.len(End))==End
@@ -630,7 +612,12 @@ function (mrg, data)
 
       local mime_type = path_get_mime_type(state.path)
       local handler = mime_handler[mime_type]
-      handler.dispatch(handler)
+
+      if handler.cb then
+        handler.cb(handler)
+      else
+        dispatch_child (handler)
+      end
 
       cr:rectangle(0, y, 8 * mrg:em(), mrg:height())
       mrg:listen(Mrg.DRAG, function(ev)
@@ -733,9 +720,33 @@ function (mrg, data)
   if in_modal then
     mrg_modal_draw (mrg)
   end
+
+  mrg:listen(Mrg.MESSAGE, function(event)
+    local message = event:message()
+    if message == 'persist' then
+      store_state()
+      cleanup_child ()
+    end
+
+  end)
+
 end)
 
 mrg:css_set(css)
 restore_state()
+
+mime_handler['text/plain'] = {execute='mrl-text-editor'}
+mime_handler['image/gif']  = {execute='mmm-gifplay', options='--loop=1000'}
+mime_handler['unknown']    = {execute='mrl-file-info'}
+
+mime_handler['image/jpeg']  = {execute='mrl-image-view'}
+mime_handler['image/png']   = {execute='mrl-image-view'}
+
+if false then
+  mime_handler['image/jpeg'] = {cb=internal_image}
+  mime_handler['image/png']  = {cb=internal_image}
+end
+
 mrg:main()
 host:destroy()
+

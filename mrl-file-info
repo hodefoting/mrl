@@ -1,7 +1,20 @@
 #!/usr/bin/env luajit
 
 local Mrg    = require('mrg')
+local io     = require('io')
 local mrg    = Mrg.new(-1, -1);
+
+function os.capture(cmd, raw)
+  local f = assert(io.popen(cmd, 'r'))
+  local s = assert(f:read('*a'))
+  f:close()
+  if raw then return s end
+  s = string.gsub(s, '^%s+', '')
+  s = string.gsub(s, '%s+$', '')
+  s = string.gsub(s, '[\n\r]+', ' ')
+  return s
+end
+
 
 local path
 
@@ -11,7 +24,10 @@ end
 
 mrg:set_ui(
 function (mrg, data)
-  mrg:print(path)
+
+  local info = os.capture('file "' .. path ..'"') .. '\n' .. os.capture('ls -la "' .. path .. '" | cut -c 1-45')
+  mrg:print(info)
+
   mrg:add_binding("control-q", NULL, NULL, function () mrg:quit() end)
 end)
 

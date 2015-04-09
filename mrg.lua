@@ -846,6 +846,7 @@ ffi.metatype('Mrg', {__index = {
 ffi.metatype('MrgEvent',     {__index = { 
 
   stop_propagate = function (...) return C.mrg_event_stop_propagate (...) end,
+  message = function (event) return ffi.string(event.key_name) end,
 
 }})
 ffi.metatype('MrgColor',     {__index = { }})
