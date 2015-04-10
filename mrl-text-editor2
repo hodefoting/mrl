@@ -1,0 +1,3 @@
+#!/bin/sh
+
+mrg terminal 'busybox vi '\"$1\"''
