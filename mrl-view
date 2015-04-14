@@ -596,6 +596,7 @@ end)
 
 
 mime_handler['text/plain'] = {execute='mrl-text-editor'}
+mime_handler['text/plain'] = {execute='mrl-text-editor2'}
 mime_handler['image/gif']  = {execute='mmm-gifplay', options='--loop=1000'}
 mime_handler['unknown']    = {execute='mrl-file-info'}
 
