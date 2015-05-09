@@ -36,7 +36,7 @@ local os     = require('os')
 local string = require('string')
 local Mrg    = require('mrg')
 --local mrg    = Mrg.new(-1, -1);
-local mrg    = Mrg.new(640, 480);
+local mrg    = Mrg.new(1024, 768);
 local host   = mrg:host_new("/tmp/mrg")
 
 local notifications = {

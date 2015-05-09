@@ -12,10 +12,7 @@ local lyd = Lyd.new()
 
 local instrument = [[
 
-saw (hz * (1.0 + sin(tremolo=5)*tremolo_amount=0.05)) *
-     adsr(0.1,0,1.0,0.1)
-
-#pluck (hz=440) * adsr(0.0,0,vol=4,5.0)
+pluck (hz=440) * adsr(0.0,0,vol=4,5.0)
 # try these other formulas by commenting out the above an uncommenting the other
 # square (hz) * adsr(0.1,0,1.0,0.1)
 # sin (hz) * adsr(0.1,0,1.0,0.1)
