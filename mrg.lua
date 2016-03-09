@@ -67,7 +67,8 @@ enum _MrgType {
   MRG_DRAG_RELEASE   = 1 << 9,
   MRG_KEY_DOWN       = 1 << 10,
   MRG_KEY_UP         = 1 << 11,
-  MRG_MESSAGE        = 1 << 12,
+  MRG_SCROLL         = 1 << 12,
+  MRG_MESSAGE        = 1 << 13,
 
   MRG_TAPS     = (MRG_TAP | MRG_TAP_AND_HOLD),
   MRG_POINTER  = (MRG_PRESS | MRG_MOTION | MRG_RELEASE),
@@ -262,6 +263,8 @@ struct _MrgEvent {
   float   prev_y;
   float   delta_x; /* x - prev_x */
   float   delta_y; /* y - prev_y */
+
+  int     scroll_direction;
 
   /* only valid for key-events */
   unsigned int unicode;
