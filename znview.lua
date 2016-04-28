@@ -6,7 +6,7 @@ local Zn = require('zn');
 local zn=Zn.new()
 local mrg=Mrg.new(640,480);
 
-local item_no = 4;
+local item_no = 0;
 
 local css = [[
   .body { margin: 1em; margin-top:0;}
@@ -56,6 +56,7 @@ function (mrg, data)
     mrg:start("div.item.parents")
     mrg:text_listen(Mrg.TAP, function()
        id=parent
+       item_no=0
        mrg:queue_draw(nil)
     end)
     mrg:print(zn:deref(parent))
@@ -65,44 +66,32 @@ function (mrg, data)
 
   for i = 0, zn:count_children(id)-1 do
     local child = zn:list_children(id)[i]
-
-
     if (zn:count_children(child) > 0) then
       mrg:text_listen(Mrg.TAP, function()
          id=child
          mrg:queue_draw(nil)
       end)
-      mrg:start("div.item.children")
-      if i == item_no then
-       mrg:edit_start(
-         function(new_text)
-           id=zn:string(new_text)
-           mrg:queue_draw(nil)
-         end)
       end
-      mrg:print(zn:deref(child))
+      if zn:count_children(child) > 0 then
+        mrg:start("div.item.children")
+      else
+        mrg:start("div.item")
+      end
       if i == item_no then
+         mrg:edit_start(
+            function(new_text)
+              zn:replace_child(id, item_no, zn:string(new_text))
+              mrg:queue_draw(nil)
+            end)
+        mrg:print(zn:deref(child))
         mrg:edit_end()
+      else
+        mrg:print(zn:deref(child))
       end
-
       zn:unref(child)
       mrg:close()
+    if (zn:count_children(child) > 0) then
       mrg:text_listen_done()
-    else
-      mrg:start("div.item")
-      if i == item_no then
-       mrg:edit_start(
-         function(new_text)
-           id=zn:string(new_text)
-           mrg:queue_draw(nil)
-         end)
-      end
-      mrg:print(zn:deref(child))
-      if i == item_no then
-        mrg:edit_end()
-      end
-      zn:unref(child)
-      mrg:close()
     end
   end
   mrg:close()
@@ -110,6 +99,7 @@ function (mrg, data)
   mrg:add_binding("down", NULL, NULL,
     function (event)
       item_no = item_no + 1
+      if item_no > zn:count_children(id) then item_no = zn:count_children(id) end
       mrg:set_cursor_pos(0)
       mrg:queue_draw(nil)
       event:stop_propagate()
@@ -117,10 +107,18 @@ function (mrg, data)
   mrg:add_binding("up", NULL, NULL,
     function (event)
       item_no = item_no - 1
+      if item_no < -1 then item_no = -1 end
       mrg:set_cursor_pos(0)
       mrg:queue_draw(nil)
       event:stop_propagate()
     end)
+
+  mrg:add_binding("return", NULL, NULL,
+    function (event)
+      print(mrg:get_cursor_pos())
+    end)
+  mrg:add_binding("control-q", NULL, NULL, function (event) mrg:quit() end)
+
 end)
 
 mrg:set_title(title)
