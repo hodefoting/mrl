@@ -115,7 +115,14 @@ function (mrg, data)
 
   mrg:add_binding("return", NULL, NULL,
     function (event)
-      print(mrg:get_cursor_pos())
+      local str = zn:deref(zn:list_children(id)[item_no])
+      local cursor = mrg:get_cursor_pos()
+      zn:remove_child(id, item_no)
+      mrg:set_cursor_pos(0)
+      zn:add_child_at(id, item_no, zn:string(str:sub(cursor + 1, -1)))
+      zn:add_child_at(id, item_no, zn:string(str:sub(0, cursor)))
+      item_no = item_no + 1
+      mrg:queue_draw(nil)
     end)
   mrg:add_binding("control-q", NULL, NULL, function (event) mrg:quit() end)
 
