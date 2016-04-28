@@ -240,10 +240,20 @@ enum _MrgModifierState
   MRG_MODIFIER_STATE_BUTTON3 = (1<<5)
 };
 
+typedef enum _MrgScrollDirection MrgScrollDirection;
+enum _MrgScrollDirection
+{
+  MRG_SCROLL_DIRECTION_UP,
+  MRG_SCROLL_DIRECTION_DOWN,
+  MRG_SCROLL_DIRECTION_LEFT,
+  MRG_SCROLL_DIRECTION_RIGHT
+};
+
 struct _MrgEvent {
   MrgType  type;
   Mrg     *mrg;
-  long     time;
+  uint32_t time;
+
   MrgModifierState state;
 
   int      device_no; /* 0 = left mouse button / virtual focus */
@@ -251,26 +261,30 @@ struct _MrgEvent {
                       /* 2 = right mouse button */
                       /* 3 = first multi-touch .. (NYI) */
 
-  float   device_x; /* untransformed x/y coordinates  */
+  float   device_x; /* untransformed (device) coordinates  */
   float   device_y;
 
-  /* coordinates; and deltas for motion events in user-coordinates: */
+  /* coordinates; and deltas for motion/drag events in user-coordinates: */
   float   x;
   float   y;
-  float   start_x; /* start-coordinates (press) event for drag */
-  float   start_y;
+  float   start_x; /* start-coordinates (press) event for drag, */
+  float   start_y; /*    untransformed coordinates */
   float   prev_x;  /* previous events coordinates */
   float   prev_y;
-  float   delta_x; /* x - prev_x */
-  float   delta_y; /* y - prev_y */
+  float   delta_x; /* x - prev_x, redundant - but often useful */
+  float   delta_y; /* y - prev_y, redundant - ..  */
 
-  int     scroll_direction;
+  MrgScrollDirection scroll_direction;
 
   /* only valid for key-events */
   unsigned int unicode;
-  const char *key_name; /* can be "up" "down" "a" "b" "ø" etc .. */
-  int stop_propagate_do_not_use;
+  const char *key_name; /* can be "up" "down" "space" "backspace" "a" "b" "ø" etc .. */
+                        /* this is also where the message is delivered for
+                         * MESSAGE events
+                         */
+//  int stop_propagate; /* */
 };
+
 void mrg_event_stop_propagate (MrgEvent *event);
 
 void  mrg_text_listen (Mrg *mrg, MrgType types,
