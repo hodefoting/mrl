@@ -17,6 +17,7 @@ local css = [[
   }
   .item {font-size: 20px; width: 100%; color: black; border: 1px solid transparent; 
      margin-top: 0.5em;
+     padding: 0.1em;
   
   }
   .children { color : red }
@@ -36,20 +37,24 @@ local scroll_y = 0
 
 local history = {}
 local historic_item_no = {}
+local historic_scroll_y = {}
 
 function cgo(target)
   table.insert(history, id)
   table.insert(historic_item_no, item_no)
+  table.insert(historic_scroll_y, scroll_y)
 
   id = target
-  item_no=0
+  item_no = 0
+  scroll_y = 0
   mrg:queue_draw(nil)
 end
 
 function cback()
   if table.getn(history) > 0 then
     id = table.remove(history)
-    item_no= table.remove(historic_item_no)
+    item_no = table.remove(historic_item_no)
+    scroll_y = table.remove(historic_scroll_y)
     mrg:queue_draw(nil)
   end
 end
@@ -70,6 +75,7 @@ function view_list (mrg)
       return 0
     end)
   cr:new_path()
+  cr:save()
   cr:translate(scroll_x, scroll_y)
 
   mrg:start("div.body")
@@ -168,6 +174,7 @@ function view_list (mrg)
     end
   end
   mrg:close()
+  cr:restore()
 
   mrg:add_binding("down", NULL, NULL,
     function (event)
