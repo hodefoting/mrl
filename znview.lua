@@ -34,6 +34,26 @@ mrg:css_set(css)
 local scroll_x = 0
 local scroll_y = 0
 
+local history = {}
+local historic_item_no = {}
+
+function cgo(target)
+  table.insert(history, id)
+  table.insert(historic_item_no, item_no)
+
+  id = target
+  item_no=0
+  mrg:queue_draw(nil)
+end
+
+function cback()
+  if table.getn(history) > 0 then
+    id = table.remove(history)
+    item_no= table.remove(historic_item_no)
+    mrg:queue_draw(nil)
+  end
+end
+
 function view_list (mrg)
   local cr = mrg:cr()
 
@@ -61,9 +81,8 @@ function view_list (mrg)
   if item_no == -1 then
   mrg:edit_start(
        function(new_text)
-         id=zn:string(new_text)
+         cgo(zn:string(new_text))
          item_no=-1
-         mrg:queue_draw(nil)
        end)
     mrg:print(zn:deref(id))
     zn:unref(id)
@@ -87,9 +106,7 @@ function view_list (mrg)
 
     mrg:start("div.item.parents")
     mrg:text_listen(Mrg.TAP, function()
-       id=parent
-       item_no=0
-       mrg:queue_draw(nil)
+       cgo(parent)
     end)
     mrg:print(zn:deref(parent))
     mrg:text_listen_done()
@@ -100,8 +117,7 @@ function view_list (mrg)
     local child = zn:list_children(id)[i]
     if (zn:count_children(child) > 0) then
       mrg:text_listen(Mrg.TAP, function()
-         id=child
-         mrg:queue_draw(nil)
+         cgo(child)
       end)
       end
 
@@ -221,11 +237,16 @@ function view_list (mrg)
     mrg:add_binding("right", NULL, NULL,
       function (event)
          if item_no >= 0 then
-           id= zn:list_children(id)[item_no]
-           item_no=0
-           mrg:queue_draw(nil)
+           cgo(zn:list_children(id)[item_no])
            event:stop_propagate() 
          end
+      end)
+    mrg:add_binding("left", NULL, NULL,
+      function (event)
+        if item_no >= 0 or (item_no == -1 and mrg:get_cursor_pos() == 0  ) then
+          cback()
+          event:stop_propagate() 
+        end
       end)
 
     mrg:add_binding("return", NULL, NULL,
@@ -254,6 +275,23 @@ function view_list (mrg)
   end
 end
 
+function view_image(mrg)
+    local title = zn:get_key(id, zn:string("dc:title"))
+    if title then
+      mrg:print(zn:deref(title))
+    else
+      mrg:print(mimetype)
+    end
+
+    mrg:add_binding("left", NULL, NULL,
+      function (event)
+        if item_no >= 0 or (item_no == -1 and mrg:get_cursor_pos() == 0  ) then
+          cback()
+          event:stop_propagate() 
+        end
+      end)
+end
+
 mrg:set_ui(
 function (mrg, data)
   local mimetype = zn:get_mime_type(id)
@@ -263,7 +301,7 @@ function (mrg, data)
   elseif mimetype == "text/png" 
       or mimetype == "text/jpeg" then
   else
-    mrg:print("image renderer")
+    view_image(mrg)
   end
 
   mrg:add_binding("control-q", NULL, NULL, function (event) mrg:quit() end)
