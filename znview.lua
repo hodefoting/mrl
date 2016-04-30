@@ -210,6 +210,7 @@ function view_list (mrg)
     function (event)
       if mrg:get_cursor_pos() > 0 or item_no == -1 then
       else
+        local len0 = zn:get_length(zn:list_children(id)[item_no-1])
         local str = zn:deref(zn:list_children(id)[item_no-1]) ..
                     zn:deref(zn:list_children(id)[item_no])
         zn:remove_child(id, item_no-1)
@@ -217,7 +218,7 @@ function view_list (mrg)
         zn:add_child_at(id, item_no-1, zn:string(str))
         item_no = item_no - 1
         mrg:queue_draw(nil)
-        mrg:set_cursor_pos(0)
+        mrg:set_cursor_pos(len0)
         event:stop_propagate() 
       end
     end)
