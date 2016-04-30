@@ -144,22 +144,29 @@ function view_list (mrg)
       local mimetype = zn:get_mime_type(child)
 
       if mimetype == 'text/plain' then
-        if i == item_no and list_mode then
-          mrg:edit_start(
-            function(new_text)
-              zn:replace_child(id, item_no, zn:string(new_text))
-              mrg:queue_draw(nil)
-            end)
-          mrg:print(zn:deref(child))
-          mrg:edit_end()
+        local title = zn:get_key(child, zn:string("dc:title"))
+        if title <= 0 then
+          if i == item_no and list_mode then
+            mrg:edit_start(
+              function(new_text)
+                zn:replace_child(id, item_no, zn:string(new_text))
+                mrg:queue_draw(nil)
+              end)
+            mrg:print(zn:deref(child))
+            mrg:edit_end()
+          else
+            mrg:print(zn:deref(child))
+          end
         else
-          mrg:print(zn:deref(child))
+          mrg:print(zn:deref(title))
+          zn:unref(title)
         end
       elseif mimetype == 'image/jpeg' or
              mimetype == 'image/png' then
         local title = zn:get_key(child, zn:string("dc:title"))
-        if title then
+        if title > 0 then
           mrg:print(zn:deref(title))
+          zn:unref(title)
         else
           mrg:print(mimetype)
         end
