@@ -13,8 +13,12 @@ local css = [[
   .title {font-size: 30px; width: 100%; color: black;
     margin-bottom: 1em;
   }
-  .item {font-size: 20px; width: 100%; color: black; }
+  .item {font-size: 20px; width: 100%; color: black; border: 1px solid transparent; 
+     margin-top: 0.5em;
+  
+  }
   .children { color : red }
+  .selected { border: 1px solid blue; }
   .parents {font-size: 10px; display: block-inline; padding-right: 4em; }
 ]]
 
@@ -25,8 +29,29 @@ id=zn:string(title)
 
 mrg:css_set(css)
 
+local scroll_x = 0
+local scroll_y = 0
+
 mrg:set_ui(
 function (mrg, data)
+  local cr = mrg:cr()
+
+
+  cr:rectangle(0,0,mrg:width(),mrg:height())
+  mrg:listen(Mrg.DRAG_MOTION + Mrg.DRAG_PRESS,
+    function(event)
+      if event.type == Mrg.DRAG_PRESS then
+      elseif event.type == Mrg.DRAG_MOTION then
+        scroll_y = scroll_y + event.delta_y
+        --scroll_x = scroll_x + event.delta_x
+      end
+      mrg:queue_draw(nil)
+      event:stop_propagate()
+      return 0
+    end)
+  cr:new_path()
+  cr:translate(scroll_x, scroll_y)
+
   mrg:start("div.body")
   mrg:start("div.title")
 
@@ -72,11 +97,21 @@ function (mrg, data)
          mrg:queue_draw(nil)
       end)
       end
+
       if zn:count_children(child) > 0 then
-        mrg:start("div.item.children")
+        if i == item_no then
+          mrg:start("div.item.children.selected")
+        else
+          mrg:start("div.item.children")
+        end
       else
-        mrg:start("div.item")
+        if i == item_no then
+          mrg:start("div.item.selected")
+        else
+          mrg:start("div.item")
+        end
       end
+
       if i == item_no then
          mrg:edit_start(
             function(new_text)
@@ -99,7 +134,7 @@ function (mrg, data)
   mrg:add_binding("down", NULL, NULL,
     function (event)
       item_no = item_no + 1
-      if item_no > zn:count_children(id) then item_no = zn:count_children(id) end
+      if item_no > zn:count_children(id) - 1 then item_no = zn:count_children(id) - 1 end
       mrg:set_cursor_pos(0)
       mrg:queue_draw(nil)
       event:stop_propagate()
