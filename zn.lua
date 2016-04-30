@@ -582,8 +582,8 @@ end
 
 ffi.metatype('Zn', {__index= {
   string = function(...) return C.zn_string(...) end,
-  get_length = function(...) return C.zn_length (...) end,
-  deref = function(...) return ffi.string(C.zn_load(...)) end,
+  get_length = function(...) return C.zn_get_length (...) end,
+  deref = function(...) return ffi.string(C.zn_load(...)) end, -- missing gc
   unref = function(...) C.zn_unref(...) end,
   get_key = function(...) return C.zn_get_key(...) end,
   set_key = function(...) C.zn_set_key(...) end,
@@ -653,6 +653,7 @@ ffi.metatype('Zn', {__index= {
   append_child = function(...) return C.zn_append_child (...) end,
   get_parents = function(...) return C.zn_get_parents (...) end,
   count_parents = function(...) return C.zn_count_parents (...) end,
+  get_mime_type = function(...) return ffi.string(C.zn_get_mime_type (...)) end
 
 }})
 

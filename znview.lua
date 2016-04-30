@@ -8,6 +8,8 @@ local mrg=Mrg.new(640,480);
 
 local item_no = 0;
 
+local list_mode = false;
+
 local css = [[
   .body { margin: 1em; margin-top:0;}
   .title {font-size: 30px; width: 100%; color: black;
@@ -59,6 +61,7 @@ function (mrg, data)
   mrg:edit_start(
        function(new_text)
          id=zn:string(new_text)
+         item_no=-1
          mrg:queue_draw(nil)
        end)
     mrg:print(zn:deref(id))
@@ -112,17 +115,32 @@ function (mrg, data)
         end
       end
 
-      if i == item_no then
-         mrg:edit_start(
+      local mimetype = zn:get_mime_type(child)
+
+      if mimetype == 'text/plain' then
+        if i == item_no and list_mode then
+          mrg:edit_start(
             function(new_text)
               zn:replace_child(id, item_no, zn:string(new_text))
               mrg:queue_draw(nil)
             end)
-        mrg:print(zn:deref(child))
-        mrg:edit_end()
+          mrg:print(zn:deref(child))
+          mrg:edit_end()
+        else
+          mrg:print(zn:deref(child))
+        end
+      elseif mimetype == 'image/jpeg' then
+        local title = zn:get_key(child, zn:string("dc:title"))
+        if title then
+          mrg:print(zn:deref(title))
+        else
+          mrg:print(mimetype)
+        end
       else
-        mrg:print(zn:deref(child))
+        mrg:print(mimetype)
       end
+
+
       zn:unref(child)
       mrg:close()
     if (zn:count_children(child) > 0) then
@@ -139,6 +157,7 @@ function (mrg, data)
       mrg:queue_draw(nil)
       event:stop_propagate()
     end)
+
   mrg:add_binding("up", NULL, NULL,
     function (event)
       item_no = item_no - 1
@@ -147,7 +166,20 @@ function (mrg, data)
       mrg:queue_draw(nil)
       event:stop_propagate()
     end)
-  mrg:add_binding("backspace", NULL, NULL,
+
+  mrg:add_binding("tab", NULL, NULL,
+    function (event)
+      if list_mode then
+         list_mode = false
+      else
+         list_mode = true
+      end
+      mrg:queue_draw(nil)
+      event:stop_propagate()
+    end)
+
+  if list_mode then
+    mrg:add_binding("backspace", NULL, NULL,
     function (event)
       if mrg:get_cursor_pos() > 0 or item_no == -1 then
       else
@@ -165,6 +197,7 @@ function (mrg, data)
 
   mrg:add_binding("return", NULL, NULL,
     function (event)
+      if item_no < 0 then return end
       local str = zn:deref(zn:list_children(id)[item_no])
       local cursor = mrg:get_cursor_pos()
       zn:remove_child(id, item_no)
@@ -174,6 +207,48 @@ function (mrg, data)
       item_no = item_no + 1
       mrg:queue_draw(nil)
     end)
+    mrg:add_binding("escape", NULL, NULL,
+      function (event)
+         list_mode = false
+         mrg:queue_draw(nil)
+         event:stop_propagate() 
+      end)
+  else
+    mrg:add_binding("right", NULL, NULL,
+      function (event)
+         if item_no >= 0 then
+           id= zn:list_children(id)[item_no]
+           item_no=0
+           mrg:queue_draw(nil)
+           event:stop_propagate() 
+         end
+      end)
+
+    mrg:add_binding("return", NULL, NULL,
+      function (event)
+         list_mode = true
+         mrg:queue_draw(nil)
+         event:stop_propagate() 
+      end)
+    mrg:add_binding("backspace", NULL, NULL,
+      function (event)
+         if item_no > 1 then
+           zn:remove_child(id, item_no - 1)
+           item_no = item_no - 1
+         mrg:queue_draw(nil)
+         event:stop_propagate() 
+         end
+      end)
+    mrg:add_binding("delete", NULL, NULL,
+      function (event)
+         if item_no >= 0 then
+           zn:remove_child(id, item_no)
+           mrg:queue_draw(nil)
+           event:stop_propagate() 
+         end
+      end)
+  end
+
   mrg:add_binding("control-q", NULL, NULL, function (event) mrg:quit() end)
 
 end)
