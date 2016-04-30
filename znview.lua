@@ -34,10 +34,8 @@ mrg:css_set(css)
 local scroll_x = 0
 local scroll_y = 0
 
-mrg:set_ui(
-function (mrg, data)
+function view_list (mrg)
   local cr = mrg:cr()
-
 
   cr:rectangle(0,0,mrg:width(),mrg:height())
   mrg:listen(Mrg.DRAG_MOTION + Mrg.DRAG_PRESS,
@@ -57,6 +55,9 @@ function (mrg, data)
   mrg:start("div.body")
   mrg:start("div.title")
 
+  local mimetype = zn:get_mime_type(id)
+
+  if mimetype == "text/plain" then
   if item_no == -1 then
   mrg:edit_start(
        function(new_text)
@@ -74,6 +75,9 @@ function (mrg, data)
     end)
     mrg:print(zn:deref(id))
     zn:unref(id)
+  end
+  else
+    mrg:print("[" .. mimetype .. "]")
   end
 
   mrg:close()
@@ -129,7 +133,8 @@ function (mrg, data)
         else
           mrg:print(zn:deref(child))
         end
-      elseif mimetype == 'image/jpeg' then
+      elseif mimetype == 'image/jpeg' or
+             mimetype == 'image/png' then
         local title = zn:get_key(child, zn:string("dc:title"))
         if title then
           mrg:print(zn:deref(title))
@@ -139,7 +144,6 @@ function (mrg, data)
       else
         mrg:print(mimetype)
       end
-
 
       zn:unref(child)
       mrg:close()
@@ -248,11 +252,23 @@ function (mrg, data)
          end
       end)
   end
+end
+
+mrg:set_ui(
+function (mrg, data)
+  local mimetype = zn:get_mime_type(id)
+
+  if mimetype == "text/plain" then
+    view_list(mrg)
+  elseif mimetype == "text/png" 
+      or mimetype == "text/jpeg" then
+  else
+    mrg:print("image renderer")
+  end
 
   mrg:add_binding("control-q", NULL, NULL, function (event) mrg:quit() end)
-
 end)
 
-mrg:set_title(title)
+mrg:set_title("zn")
 mrg:main()
 
