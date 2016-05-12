@@ -685,6 +685,18 @@ void        host_add_client_mrg      (MrgHost     *host,
                                       float        x,
                                       float        y);
 
+typedef struct MrgBinding {
+  char *nick;
+  char *command;
+  char *label;
+  MrgCb cb;
+  void *cb_data;
+  MrgDestroyNotify destroy_notify;
+  void  *destroy_data;
+} MrgBinding;
+
+MrgBinding *mrg_get_bindings (Mrg *mrg);
+
 ]]
 
 function M.new(width,height, backend)
@@ -749,6 +761,7 @@ ffi.metatype('Mrg', {__index = {
   edge_right         = function (...) return C.mrg_get_edge_right(...) end,
   set_rem          = function (...) C.mrg_set_rem(...) end,
   main             = function (...) C.mrg_main(...) end,
+  get_bindings     = function (...) return C.mrg_get_bindings(...) end,
   start            = function (mrg, cssid) C.mrg_start(mrg, cssid, NULL) end,
   start_with_style = function (mrg, cssid, style) C.mrg_start_with_style(mrg, cssid, NULL, style) end,
   restarter_add_path = function (...) C.mrg_restarter_add_path(...) end,
