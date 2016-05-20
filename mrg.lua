@@ -47,6 +47,7 @@ void
 mrg_list_insert_sorted (MrgList **list, void *data,
                        int(*compare)(const void *a, const void *b, void *userdata),
                        void *userdata);
+void mrg_clear_bindings (Mrg *mrg);
 
 typedef struct _Mrg Mrg;
 typedef struct _MrgColor     MrgColor;
@@ -697,6 +698,8 @@ typedef struct MrgBinding {
 
 MrgBinding *mrg_get_bindings (Mrg *mrg);
 
+int mrg_parse_svg_path (Mrg *mrg, const char *str);
+
 ]]
 
 function M.new(width,height, backend)
@@ -719,6 +722,7 @@ ffi.metatype('Mrg', {__index = {
   quit             = function (...) C.mrg_quit(...) end,
   image            = function (...) C.mrg_image(...) end,
   message          = function (...) C.mrg_message(...) end,
+  parse_svg_path   = function (...) return C.mrg_parse_svg_path(...) end,
 
   image_size       = function (mrg, path)
     local rw = ffi.new'int[1]'
@@ -930,6 +934,7 @@ ffi.metatype('MrgClient',    {__index = {
     end
     return nil 
   end,
+  clear_bindings = function (...) C.mrg_clear_bindings(...) end,
   maximize      = function (...) C.mrg_client_maximize (...) end,
   title         = function (...) return C.mrg_client_get_title (...) end,
   x             = function (...) return C.mrg_client_get_x (...) end,
