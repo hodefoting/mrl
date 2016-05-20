@@ -47,7 +47,6 @@ void
 mrg_list_insert_sorted (MrgList **list, void *data,
                        int(*compare)(const void *a, const void *b, void *userdata),
                        void *userdata);
-void mrg_clear_bindings (Mrg *mrg);
 
 typedef struct _Mrg Mrg;
 typedef struct _MrgColor     MrgColor;
@@ -99,6 +98,7 @@ typedef void (*UiRenderFun)(Mrg *mrg, void *ui_data);
 
 void  mrg_destroy       (Mrg *mrg);
 
+void mrg_clear_bindings (Mrg *mrg);
 void  mrg_set_size      (Mrg *mrg, int width, int height);
 void  mrg_set_position  (Mrg *mrg, int x, int y);
 void  mrg_get_position  (Mrg *mrg, int *x, int *y);
