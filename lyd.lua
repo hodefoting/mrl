@@ -38,22 +38,20 @@ typedef LydVM LydVoice;
 
 LydVoice   *lyd_voice_new       (Lyd *lyd, LydProgram *program, double delay, int tag);
 
-void        lyd_voice_release   (Lyd *lyd, LydVoice *voice);
+void        lyd_voice_release   (LydVoice *voice);
 
 void        lyd_kill            (Lyd *lyd, int tag);
 
+void        lyd_voice_kill      (LydVoice *voice);
 
-void        lyd_voice_kill      (Lyd *lyd, LydVoice *voice);
+LydVoice   *lyd_voice_set_delay (LydVoice *voice, double seconds);
 
-void        lyd_voice_set_delay (Lyd *lyd, LydVoice *voice, double seconds);
+LydVoice   *lyd_voice_set_duration (LydVoice *voice, double duration);
 
-void        lyd_voice_set_duration (Lyd *lyd, LydVoice *voice, double duration);
-
-void        lyd_voice_set_position (Lyd      *lyd,
-                                    LydVoice *voice,
+LydVoice   *lyd_voice_set_position (LydVoice *voice,
                                     double    position);
 
-void        lyd_voice_set_param (Lyd        *lyd,   LydVoice *voice,
+LydVoice   *lyd_voice_set_param (LydVoice *voice,
                                  const char *param, double value);
 
 typedef enum {
@@ -64,7 +62,7 @@ typedef enum {
 } LydInterpolation;
 
 
-void        lyd_voice_set_param_delayed (Lyd        *lyd,   LydVoice *voice,
+LydVoice   *lyd_voice_set_param_delayed (LydVoice *voice,
                                          const char *param, double    time,
                                          LydInterpolation interpolation,
                                          double      value);
@@ -146,7 +144,7 @@ end
 ffi.metatype('Lyd', {__index = {
   -- maybe we should add a _full version to this as well, then all callback
   -- things in the code would be lifecycle managed.
-  note       = function (...) C.lyd_note(...) end,
+  note       = function (...) return C.lyd_note(...) end,
   audio_init = function (...) C.lyd_audio_init(...) end,
   set_sample_rate = function (...) C.lyd_set_sample_rate(...) end,
   get_sample_rate = function (...) return C.lyd_get_sample_rate(...) end,
@@ -172,12 +170,12 @@ ffi.metatype('Lyd', {__index = {
 }})
 
 ffi.metatype('LydVoice', {__index = { 
-  release = function (...) C.lyd_voice_release(...) end,
+  release = function (...) return C.lyd_voice_release(...) end,
   kill    = function (...) C.lyd_voice_kill(...) end,
-  set_delay = function (...) C.lyd_voice_set_delay(...) end,
-  set_duration = function (...) C.lyd_voice_set_duration(...) end,
-  set_position = function (...) C.lyd_voice_set_position(...) end,
-  set_param = function (...) C.lyd_voice_set_param(...) end
+  set_delay = function (...) return C.lyd_voice_set_delay(...) end,
+  set_duration = function (...) return C.lyd_voice_set_duration(...) end,
+  set_position = function (...) return C.lyd_voice_set_position(...) end,
+  set_param = function (...) return C.lyd_voice_set_param(...) end
 
 }})
 ffi.metatype('LydProgram', {__index = { 

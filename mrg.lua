@@ -723,6 +723,7 @@ ffi.metatype('Mrg', {__index = {
   image            = function (...) C.mrg_image(...) end,
   message          = function (...) C.mrg_message(...) end,
   parse_svg_path   = function (...) return C.mrg_parse_svg_path(...) end,
+  clear_bindings = function (...) C.mrg_clear_bindings(...) end,
 
   image_size       = function (mrg, path)
     local rw = ffi.new'int[1]'
@@ -934,7 +935,6 @@ ffi.metatype('MrgClient',    {__index = {
     end
     return nil 
   end,
-  clear_bindings = function (...) C.mrg_clear_bindings(...) end,
   maximize      = function (...) C.mrg_client_maximize (...) end,
   title         = function (...) return C.mrg_client_get_title (...) end,
   x             = function (...) return C.mrg_client_get_x (...) end,
