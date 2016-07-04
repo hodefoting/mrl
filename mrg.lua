@@ -32,7 +32,6 @@ void mrg_list_append_full (MrgList **list, void *data,
 void mrg_list_append (MrgList **list, void *data);
 
 void mrg_list_remove (MrgList **list, void *data);
-
 void mrg_list_free (MrgList **list);
 
 MrgList *mrg_list_nth (MrgList *list, int no);
@@ -216,7 +215,10 @@ int mrg_pointer_release  (Mrg *mrg, float x, float y, int device_no, uint32_t ti
 int mrg_pointer_motion   (Mrg *mrg, float x, float y, int device_no, uint32_t time);
 int mrg_key_press        (Mrg *mrg, unsigned int keyval, const char *string, uint32_t time);
 
-
+int mrg_is_printing      (Mrg *mrg);
+void mrg_new_page (Mrg *mrg);
+void mrg_render_pdf (Mrg *mrg, const char *pdf_path);
+void mrg_render_svg (Mrg *mrg, const char *svg_path);
 
 /* these deal with pointer_no 0 only
  */
@@ -721,6 +723,10 @@ ffi.metatype('Mrg', {__index = {
   warp_pointer     = function (...) C.mrg_warp_pointer(...) end,
   quit             = function (...) C.mrg_quit(...) end,
   image            = function (...) C.mrg_image(...) end,
+  render_pdf       = function (...) C.mrg_render_pdf(...) end,
+  render_svg       = function (...) C.mrg_render_svg(...) end,
+  is_printing      = function (...) return C.mrg_is_printing (...) end,
+  new_page         = function (...) C.mrg_new_page(...) end,
   message          = function (...) C.mrg_message(...) end,
   parse_svg_path   = function (...) return C.mrg_parse_svg_path(...) end,
   clear_bindings = function (...) C.mrg_clear_bindings(...) end,
@@ -1084,7 +1090,7 @@ local minimal={
 
   {x=525,  w=40, y=105, label='⌫', code='backspace', fn_label='del', fn_code='delete'},
 
-  {x=20,   y=105, label='↹', code='tab', fn_label='esc', fn_code='escape'},
+  {x=20,   y=105, label='esc', code='escape', fn_label='↹', fn_code='tab'},
   {x=70,   y=145, label='a', shifted='A', fn_label='!'},
   {x=110,  y=145, label='s', shifted='S', fn_label='@'},
   {x=150,  y=145, label='d', shifted='D', fn_label='#'},

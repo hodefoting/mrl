@@ -133,6 +133,19 @@ LydVoice *lyd_note_full (Lyd *lyd, int patch, float hz, float volume,
                          float duration, float pan, int tag);
 
 
+
+int          lyd_add_pre_cb (Lyd *lyd,
+                             void (*cb)(Lyd *lyd, float elapsed, void *data),
+                             void *data);
+int          lyd_add_post_cb (Lyd *lyd,
+                              void (*cb)(Lyd *lyd, int samples,
+                                         void *stream, void *stream2,
+                                         void *data),
+                              void *data);
+
+double lyd_get_time (Lyd *lyd);
+void lyd_reset_time (Lyd *lyd);
+
 ]]
 
 function M.new()
@@ -145,6 +158,24 @@ ffi.metatype('Lyd', {__index = {
   -- maybe we should add a _full version to this as well, then all callback
   -- things in the code would be lifecycle managed.
   note       = function (...) return C.lyd_note(...) end,
+  note_full  = function (...) return C.lyd_note_full(...) end,
+  get_time = function (...) return C.lyd_get_time(...) end,
+  reset_time = function (...) C.lyd_reset_time(...) end,
+
+  add_pre_cb =
+  function (lyd,cb,data)
+    local notify_fun, cb_fun;
+    local notify_cb = function (finalize_data)
+      cb_fun:free();
+      --notify_fun:free();
+      return 0;
+    end
+
+    cb_fun = ffi.cast ("int (*)(Lyd *, double , void *)", cb)
+    --notify_fun = ffi.cast ("void (*)(void*)", notify_cb)
+
+    return C.lyd_add_pre_cb(lyd, cb_fun, nil)
+  end,
   audio_init = function (...) C.lyd_audio_init(...) end,
   set_sample_rate = function (...) C.lyd_set_sample_rate(...) end,
   get_sample_rate = function (...) return C.lyd_get_sample_rate(...) end,
