@@ -4,7 +4,19 @@ local M = {}
 -- that sniffs magic, this is the simplest thing
 -- that almost works though
 
+
 function M.for_path(path)
+
+if path:match("mrl-") then
+  return "application/mmm"
+end
+if path:match("mmm-") then
+  return "application/mmm"
+end
+if path:match("mrg-") then
+  return "application/mmm"
+end
+
    if path:has_prefix("/proc/") then
      return "text/plain"
    elseif path:has_suffix(".gif") or
@@ -36,8 +48,10 @@ function M.for_path(path)
       path:has_suffix('.pc') or 
       path:has_suffix('.inc') or 
       path:has_suffix('.h') or 
-      path:has_suffix('.css') or 
-      path:has_suffix(".lua") then
+      path:has_suffix('.css') 
+     -- or 
+     -- path:has_suffix(".lua")
+     then
       return "text/plain"
    end
 
@@ -45,6 +59,11 @@ function M.for_path(path)
   io.input(path)
   document = io.read("*line")
   io.close()
+
+  --if document and document:match("('mrg')") then
+  if document and document:match("luajit") then
+      return "text/mrl"
+  end
 
   if document and document:match('lua') then
       return "text/plain"

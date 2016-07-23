@@ -67,7 +67,7 @@ function M.modal_draw(mrg)
     event:stop_propagate()
   end)
   mrg:listen(Mrg.TAP, function(event)
-    mrg_modal_end (mrg)
+    M.modal_end (mrg)
   end)
   cr:fill()
   
@@ -85,7 +85,7 @@ function M.modal_draw(mrg)
   for i,v in pairs(modal_choices) do
     mrg:text_listen(Mrg.TAP, function(event)
       if v.cb and v.type ~= 'edit' then 
-        mrg_modal_end (mrg)
+        M.modal_end (mrg)
         v.cb() 
       end
       mrg:queue_draw(nil)

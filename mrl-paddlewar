@@ -9,7 +9,7 @@
 local Mrg  = require('mrg')
 local math = require('math')
 local os   = require('os')
-local mrg  = Mrg.new(500, 500)
+local mrg  = Mrg.new(-1,-1)
 
 local in_menu
 local game_started = false
@@ -277,5 +277,5 @@ end)
 
 math.randomseed( os.time() )
 
-mrg:set_title('paddle game')
+mrg:set_title('paddle war')
 mrg:main()

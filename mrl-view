@@ -50,7 +50,7 @@ document {font-size: 20px; }
 /* .folder {border: 1px solid red; } */
 .dentry {color:blue} 
 /* .entry  {border: 1px solid green; } */
-#current { border: 2px solid green; background: blue; }
+#current { border: 2px solid green; background: rgb(0,0,255,0.5); }
 .content {color: blue ; background: white; }
 .size { width: 5em; display: block; float: left; }
 .size_unit { color: gray }
@@ -68,7 +68,7 @@ function cleanup_child()
 end
 
 local current_child_path = nil
-function dispatch_child (handler)
+function dispatch_child (handler, mime_type)
   if current_child_path == state.path then
     return
   end
@@ -76,18 +76,42 @@ function dispatch_child (handler)
   cleanup_child()
   mrg:add_timeout(0, function() mrg:queue_draw(nil) return 0 end)
   local childpid = S.fork()
+
+
   if (childpid == 0) then    -- in child
-    if handler.options then
-      S.execve(mrl.which(handler.execute),
-               {mrl.which(handler.execute), state.path, handler.options},
-               {"PATH=" .. S.getenv('PATH'),
-                "MMM_PATH=" .. comp_dir})
+
+    print ("fooo: " .. mime_type)
+
+    if mime_type == 'application/mmm' then
+
+      if handler.options then
+        S.execve(state.path,
+                 {state.path, handler.options},
+                 {"PATH=" .. S.getenv('PATH'),
+                 "MMM_PATH=" .. comp_dir})
+      else
+        S.execve(state.path, {state.path},
+                 {"PATH=" .. S.getenv('PATH'),
+                  "MMM_PATH=" .. comp_dir})
+      end
+
     else
-      S.execve(mrl.which(handler.execute), {mrl.which(handler.execute), state.path},
-               {"PATH=" .. S.getenv('PATH'),
-                "MMM_PATH=" .. comp_dir})
+      if handler.options then
+        S.execve(mrl.which(handler.execute),
+                 {mrl.which(handler.execute), state.path, handler.options},
+                 {"PATH=" .. S.getenv('PATH'),
+                 "MMM_PATH=" .. comp_dir})
+      else
+        S.execve(mrl.which(handler.execute), {mrl.which(handler.execute), state.path},
+                 {"PATH=" .. S.getenv('PATH'),
+                  "MMM_PATH=" .. comp_dir})
+      end
+
     end
     S.exit()
+
+
+
   else                       -- in parent
     old_pid = childpid
     S.nanosleep(0.1) -- XXX: eeek, avoiding construction race... needs fixing in mmm
@@ -389,7 +413,8 @@ function draw_folder(mrg, path, currpath, details)
        end
       xml = xml .. "</div>\n"
       mrg:print_xml(xml)
-      mrg:text_listen_done()
+
+      mrg:text_listen_done() -- maybe it is text listening for whole xml take make it icky?
 
       if mrg:y() + state.folder_pan > mrg:height() then break end
     end
@@ -440,7 +465,7 @@ function (mrg, data)
         if handler.cb then
           handler.cb(handler)
         else
-          dispatch_child (handler)
+          dispatch_child (handler, mime_type)
         end
       end
 
@@ -594,16 +619,16 @@ function (mrg, data)
   end)
 end)
 
-
-mime_handler['text/plain'] = {execute='mrl-text-editor'}
-mime_handler['text/plain'] = {execute='mrl-text-editor2'}
-mime_handler['image/gif']  = {execute='mmm-gifplay', options='--loop=1000'}
-mime_handler['unknown']    = {execute='mrl-file-info'}
-
-mime_handler['image/jpeg']  = {execute='mrl-image-view'}
-mime_handler['image/png']   = {execute='mrl-image-view'}
-mime_handler['image/svg']   = {execute='mrl-svg-view'}
-mime_handler['text/html']   = {execute='mrl-html-view'}
+mime_handler['text/plain']      = {execute='mrl-text-editor'}
+--mime_handler['text/plain']      = {execute='mrl-text-editor2'}
+mime_handler['image/gif']       = {execute='mmm-gifplay', options='--loop=1000'}
+mime_handler['unknown']         = {execute='mrl-file-info'}
+mime_handler['text/mrl']        = {execute='luajit'}
+mime_handler['application/mmm'] = {execute='lua'}
+mime_handler['image/jpeg']      = {execute='mrl-image-view'}
+mime_handler['image/png']       = {execute='mrl-image-view'}
+mime_handler['image/svg']       = {execute='mrl-svg-view'}
+mime_handler['text/html']       = {execute='mrl-html-view'}
 
 if false then
   mime_handler['image/jpeg'] = {cb=internal_image}
