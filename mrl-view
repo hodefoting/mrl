@@ -4,6 +4,7 @@
 --   text editing
 --     mark modified and unsaved files in file browser, keep clients open, permitting multitask editing with minimal ui.
 --     ask to save changes when trying to switch file or perhaps dir?
+--     run mrg- mmm- mrl- and luajit scripts directly
 --   open context menu with keyboard shortcut
 --   escape paths
 --   thumbnails
@@ -307,7 +308,7 @@ function collect_dir (path, query)
          file.name = name
 
          if not hide_dot or string.sub(file.name, 1, 1) ~= '.' then
-           if query == '' then
+           if query == nil or query == '' then
              table.insert(dir, file) 
            else
              if string.match(file.name, '^' .. query) then
