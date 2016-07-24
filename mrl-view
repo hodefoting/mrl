@@ -23,7 +23,8 @@ if true then
 end
 
 local Mrg = require('mrg')
-local mrg = Mrg.new(512, 512);
+--local mrg = Mrg.new(512, 512);
+local mrg = Mrg.new(-1, -1);
 local mime = require('mime')
 local mrl  = require('mrl')
 
