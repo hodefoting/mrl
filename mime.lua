@@ -55,22 +55,14 @@ end
       return "text/plain"
    end
 
-
   io.input(path)
   document = io.read("*line")
   io.close()
 
-  --if document and document:match("('mrg')") then
   if document and document:match("luajit") then
-      return "text/mrl"
+    return "application/mmm"
   end
-
-  if document and document:match('lua') then
-      return "text/plain"
-  end
-
-
-   return "unknown"
+  return "text/plain"
 end
 
 return M
