@@ -82,8 +82,6 @@ function dispatch_child (handler, mime_type)
 
   if (childpid == 0) then    -- in child
 
-    print ("fooo: " .. mime_type)
-
     if mime_type == 'application/mmm' then
 
       if handler.options then
@@ -623,7 +621,7 @@ end)
 
 mime_handler['text/plain']      = {execute='mrl-text-editor'}
 --mime_handler['text/plain']      = {execute='mrl-text-editor2'}
-mime_handler['image/gif']       = {execute='mmm-gifplay', options='--loop=1000'}
+mime_handler['image/gif']       = {execute='mmm-gifplay' } -- , options='--loop=1000'}
 mime_handler['unknown']         = {execute='mrl-file-info'}
 mime_handler['text/mrl']        = {execute='luajit'}
 mime_handler['application/mmm'] = {execute='lua'}
