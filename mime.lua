@@ -17,6 +17,14 @@ if path:match("mrg-") then
   return "application/mmm"
 end
 
+   if path:has_suffix(".mp4") then
+     return "video/mpeg4"
+   elseif path:has_suffix(".ogv") then
+     return "video/ogv"
+   elseif path:has_suffix(".mpg") then
+     return "video/mpeg"
+   end
+
    if path:has_prefix("/proc/") then
      return "text/plain"
    elseif path:has_suffix(".gif") or

@@ -70,15 +70,16 @@ function cleanup_child()
 end
 
 local current_child_path = nil
+
 function dispatch_child (handler, mime_type)
   if current_child_path == state.path then
-    return
+    return   -- this is the reason some bugs can/could be worked around by setting a different item as active
   end
   current_child_path = state.path
   cleanup_child()
   mrg:add_timeout(0, function() mrg:queue_draw(nil) return 0 end)
-  local childpid = S.fork()
 
+  local childpid = S.fork()
 
   if (childpid == 0) then    -- in child
 
@@ -109,9 +110,6 @@ function dispatch_child (handler, mime_type)
 
     end
     S.exit()
-
-
-
   else                       -- in parent
     old_pid = childpid
     S.nanosleep(0.1) -- XXX: eeek, avoiding construction race... needs fixing in mmm
@@ -352,6 +350,8 @@ function draw_folder(mrg, path, currpath, details)
 
     for i,file in pairs(dir) do
 
+      if file and file.path:has_suffix('_')  then
+      else
       mrg:text_listen(Mrg.TAP + Mrg.TAP_AND_HOLD,
          function(event,d1,d2)
            if event.type == Mrg.TAP then
@@ -417,6 +417,8 @@ function draw_folder(mrg, path, currpath, details)
       mrg:text_listen_done() -- maybe it is text listening for whole xml take make it icky?
 
       if mrg:y() + state.folder_pan > mrg:height() then break end
+
+      end
     end
     mrg:close()
     cr:restore()
@@ -488,7 +490,7 @@ function (mrg, data)
   mrg:add_binding("control-q", NULL, NULL, function (event) mrg:quit() end)
 
   if state.child_focus then
-    mrg:add_binding("tab", NULL, NULL, function (event)
+    mrg:add_binding("meta", NULL, NULL, function (event) -- XXX: dunno if "meta" is valid binding
       state.child_focus = not state.child_focus
       mrg:queue_draw(nil)
     end )
@@ -619,6 +621,11 @@ function (mrg, data)
   end)
 end)
 
+mime_handler['video/mpeg4']       = {execute='mmm-ffplay'}
+mime_handler['video/ogv']         = {execute='mmm-ffplay'}
+mime_handler['video/mpeg']        = {execute='mmm-ffplay'}
+mime_handler['video/theora']      = {execute='mmm-ffplay'}
+
 mime_handler['text/plain']      = {execute='mrl-text-editor'}
 --mime_handler['text/plain']      = {execute='mrl-text-editor2'}
 mime_handler['image/gif']       = {execute='mmm-gifplay' } -- , options='--loop=1000'}
@@ -637,6 +644,13 @@ end
 
 mrg:css_set(css)
 restore_state()
+
+if false then
+mrg:add_timeout(23000, function()
+  go_next()
+  return 1
+end)
+end
 
 mrg:main()
 cleanup_child()

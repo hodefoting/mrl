@@ -1199,10 +1199,11 @@ M.draw_keyboard = function (mrg)
           if shifted and v.shifted then keystr = v.shifted end
           if fnd and v.fn_label then keystr = v.fn_label end
 
-          if v.code then keystr = v.code end
+          if v.code            then keystr = v.code end
           if fnd and v.fn_code then keystr = v.fn_code end
-          if alted  then keystr = 'alt-' .. keystr end
-          if ctrld then keystr = 'control-' .. keystr end
+          if alted             then keystr = 'alt-' .. keystr end
+          if ctrld             then keystr = 'control-' .. keystr end
+
           mrg:key_press(0, keystr, 0)
         end
         mrg:queue_draw(nil)

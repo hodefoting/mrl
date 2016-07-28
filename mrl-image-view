@@ -1,22 +1,63 @@
 #!/usr/bin/env luajit
 
 local Mrg    = require('mrg')
+local S      = require('syscall')
 local mrg    = Mrg.new(-1, -1);
-
 local path = '/home/pippin/pippin.jpg'
 
 if (#arg >= 1) then
   path = arg[1]
 end
 
+function get_path(path)
+  local t = {}
+  local newp = '';
+  for str in string.gmatch(path, "([^/]+)") do
+    t[#t+1] = str
+  end
+  for i = 1,#t-1 do
+    newp = newp .. '/' .. t[i]
+  end
+  if newp == '' then newp = '/' end
+  return newp
+end
+
+function get_basename(path)
+  local t = {}
+  local last = ''
+  for str in string.gmatch(path, "([^/]+)") do
+    t[#t+1] = str
+    last=str
+  end
+  return last
+end
+
+local thumb_path = get_path(path) .. '/.thumb/' .. get_basename(path)
+
+local initialized = false
+
+local thumb_done = false
+
 mrg:set_ui(
 function (mrg, data)
+
+  if (initialized == false) then
+    local stt = S.stat(thumb_path)
+    if stt and stt.isreg then
+      path = thumb_path
+      thumb_done = true
+    end
+    initialized = true;
+  end
+
   local cr = mrg:cr()
   local em = mrg:em()
+
   local w, h = mrg:image_size(path)
   local cr = mrg:cr()
   local scale = 1.0;
   local dw, dh;
+
     
   scale = (mrg:width ()) / w
   dw, dh = w * scale, h * scale
@@ -32,8 +73,16 @@ function (mrg, data)
   cr:save()
   cr:translate((mrg:width() - dw)/2, 
               ((mrg:height() - dh)/2))
+
   mrg:image(0, 0, dw, dh, path)
   cr:restore()
+
+  if (thumb_done== false) then
+    if mrg:width () > 512 then 
+      cr:get_target():write_to_png(thumb_path)
+      thumb_done=true
+    end
+  end
 
   mrg:add_binding("control-q", NULL, NULL,
     function ()
