@@ -66,6 +66,8 @@ function (mrg, data)
   mrg:print(document)
   mrg:edit_end() -- or should edit_start just apply to the next print statement?
 
+  -- do I need a return keybinding here?
+
   mrg:add_binding("control-q", NULL, NULL,
     function ()
       mrg:quit()

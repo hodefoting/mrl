@@ -52,7 +52,7 @@ document {font-size: 20px; }
 /* .folder {border: 1px solid red; } */
 .dentry {color:blue} 
 /* .entry  {border: 1px solid green; } */
-#current { border: 2px solid green; background: rgb(0,0,255,0.5); }
+#current { border: 2px solid green; }
 .content {color: blue ; background: white; }
 .size { width: 5em; display: block; float: left; }
 .size_unit { color: gray }
@@ -577,9 +577,9 @@ function (mrg, data)
   for i, client in ipairs(clients) do 
     local w, h = client:size()
     local cx, cy = client:xy()
-    client:render(mrg, 8 * mrg:em(), y)
+    client:render(mrg, 8 * mrg:em(), mrg:em()*1.2)
     client:set_xy(8 * mrg:em(), y)
-    client:set_size(mrg:width()-(8 * mrg:em()), mrg:height()-y)
+    client:set_size(mrg:width()-(8 * mrg:em()), mrg:height()-mrg:em()*1.2)
 
     if client:has_message() ~= 0 then
       local message = client:get_message()
@@ -645,12 +645,12 @@ end
 mrg:css_set(css)
 restore_state()
 
-if false then
 mrg:add_timeout(23000, function()
-  go_next()
+  if slideshow == true then
+    go_next()
+  end
   return 1
 end)
-end
 
 mrg:main()
 cleanup_child()
