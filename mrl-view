@@ -83,6 +83,8 @@ function cleanup_child()
 end
 
 local current_child_path = nil
+local last_w=400
+local last_h=300
 
 function dispatch_child (handler, mime_type)
   if current_child_path == state.path then
@@ -102,6 +104,8 @@ function dispatch_child (handler, mime_type)
         S.execve(state.path,
                  {state.path, handler.options},
                  {"PATH=" .. S.getenv('PATH'),
+                 "MMM_WIDTH=".. string.format("%d", last_w),
+                 "MMM_HEIGHT=".. string.format("%d", last_h),
                  "MMM_PATH=" .. comp_dir})
       else
         S.execve(state.path, {state.path},
@@ -114,10 +118,16 @@ function dispatch_child (handler, mime_type)
         S.execve(mrl.which(handler.execute),
                  {mrl.which(handler.execute), state.path, handler.options},
                  {"PATH=" .. S.getenv('PATH'),
+
+                 "MMM_WIDTH=".. string.format("%d", last_w),
+                 "MMM_HEIGHT=".. string.format("%d", last_h),
                  "MMM_PATH=" .. comp_dir})
       else
         S.execve(mrl.which(handler.execute), {mrl.which(handler.execute), state.path},
                  {"PATH=" .. S.getenv('PATH'),
+
+                 "MMM_WIDTH=".. string.format("%d", last_w),
+                 "MMM_HEIGHT=".. string.format("%d", last_h),
                   "MMM_PATH=" .. comp_dir})
       end
 
@@ -273,7 +283,12 @@ function set_path(new_path)
   if string.match(new_path, "/$") then
     --if stat and stat.isdir then
       --state.folder = state.path
-      new_path = new_path .. collect_dir (new_path)[1].name
+      local dir = collect_dir (new_path)
+      if #dir > 0 then
+        new_path = new_path .. dir[1].name
+      else
+        new_path = new_path .. 'empty-dir'
+      end
     --end
   end
 
@@ -449,6 +464,7 @@ function draw_folder(mrg, path, currpath, details)
     cr:restore()
 end
 
+
 mrg:set_ui(
 function (mrg, data)
   local cr = mrg:cr()
@@ -513,10 +529,12 @@ function (mrg, data)
        event:stop_propagate()
     end)
     mrg:add_binding("right",      NULL, NULL, function (event)
-            print ('a')
-      set_path(state.path .. '/')
-      print('b')
-      mrg:queue_draw(nil)
+
+      if S.stat(state.path).isdir then
+        set_path(state.path .. '/')
+        mrg:queue_draw(nil)
+      end
+
       event:stop_propagate()
     end)
     mrg:add_binding("alt-left",      NULL, NULL, function (event)
@@ -603,7 +621,10 @@ function (mrg, data)
     local cx, cy = client:xy()
     client:render(mrg, Math.floor(8 * mrg:em()), Math.floor(mrg:em()*1.2))
     client:set_xy(8 * mrg:em(), y)
-    client:set_size(mrg:width()-(8 * mrg:em()), mrg:height()-mrg:em()*1.2)
+    last_w = mrg:width()-(8 * mrg:em())
+    last_h = mrg:height()-(1.2 * mrg:em())
+    client:set_size(last_w, last_h)
+
 
     if client:has_message() ~= 0 then
       local message = client:get_message()
