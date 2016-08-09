@@ -17,27 +17,31 @@
 
 local S = require('syscall')
 
--- having this here, enables live-coding
+-- having this here, enables live-coding, changing the mrl-view file should cause a reload of mrl-view
 if true then
   S.setenv('MRG_RESTARTER','yes')
   S.setenv('MRG_BACKEND','mmm')
 end
 
+local Math = require('math')
 local Mrg = require('mrg')
 --local mrg = Mrg.new(512, 512);
 local mrg = Mrg.new(-1, -1);
 local mime = require('mime')
 local mrl  = require('mrl')
 
-local mime_handler = {} -- go to the bottom of the file to see the list of mimehandlers
+local mime_handler = {} -- go to the bottom of the file to see the list of
+                        -- mimehandlers
 
 local state={
-  path      ='/home/pippin/src/mrg/README.md',
   folder    ='/home/pippin/src/mrg',
+  path      ='/home/pippin/src/mrg/README.md',
   query     ='',
   child_focus = false,
   folder_pan=0
 }
+
+
 
 local dir = {}
 local comp_dir = "/tmp/mrg-" .. S.getpid()
@@ -47,13 +51,22 @@ local host = mrg:host_new(comp_dir)
 S.setenv("MMM_PATH","/tmp/mrg",1)
 
 local css = [[
-.pathbar { background: white; }
-document {font-size: 20px; }
+.pathbar { }
+document { font-size: 2.5%; background: black; color: white; }
+
 /* .folder {border: 1px solid red; } */
-.dentry {color:blue} 
-/* .entry  {border: 1px solid green; } */
-#current { border: 2px solid green; }
-.content {color: blue ; background: white; }
+
+/*
+.dentry {color:blue; 1px solid black} 
+ .entry  {border: 1px solid black } 
+*/
+
+#current { 
+        /*
+        border: 2px solid green ; */
+        color: yellow; }
+
+.content {  }
 .size { width: 5em; display: block; float: left; }
 .size_unit { color: gray }
 .fname { display: block; float: left; width: 80%; }
@@ -205,23 +218,75 @@ function go_previous()
   end
 end
 
+
+function collect_dir (path, query)
+    local dir = {}
+    local hide_dot = true
+
+    for str in string.gmatch(state.path, "(.*)/$") do
+      path = str
+    end
+
+    for name in S.util.ls(path) do
+       if name ~= '..' and name ~= '.' then
+         local combined_path = path .. '/' .. name
+         local file = {}
+         local stat = S.stat(combined_path)
+         if stat then
+         file.size = stat.size
+           file.isdir = stat.isdir
+         else
+           file.size = -1
+           file.isdir = false
+         end
+         file.path = combined_path
+         file.name = name
+
+         if not hide_dot or string.sub(file.name, 1, 1) ~= '.' then
+           if query == nil or query == '' then
+             table.insert(dir, file) 
+           else
+             if string.match(file.name, '^' .. query) then
+               table.insert(dir, file)
+             end
+           end
+         end
+       end
+    end
+
+    table.sort(dir, function (a,b) 
+      if a.isdir == false and b.isdir == true then
+        return false
+      elseif a.isdir == true and b.isdir == false then
+        return true
+      end
+      return a.name < b.name
+    end)
+
+    return dir
+end
+
 local editing_path = false
 
 function set_path(new_path)
+
+  if string.match(new_path, "/$") then
+    --if stat and stat.isdir then
+      --state.folder = state.path
+      new_path = new_path .. collect_dir (new_path)[1].name
+    --end
+  end
+
+
   state.path = new_path
   mrg:queue_draw(null)
   mrg:set_title(new_path)
 
   local old_folder = state.folder
 
+  print (new_path)
   local stat = S.stat(state.path)
-  if stat and stat.isdir then
-    editing_path = true
-    state.folder = state.path
-  else
-    editing_path = true
-    state.folder = get_parent(state.path)
-  end
+  state.folder = get_parent(state.path)
 
   if state.folder ~= old_folder then
     state.query=''
@@ -231,6 +296,7 @@ function set_path(new_path)
     mrg:set_cursor_pos(#state.query)
 
   store_state(state)
+ -- print ("path:" .. state.path .. "\n" .. "folder:" .. state.folder)
 end
 
 set_path (state.path)
@@ -285,47 +351,6 @@ function path_bar(mrg)
   mrg:close()
 end
 
-function collect_dir (path, query)
-    local dir = {}
-    local hide_dot = true
-    for name in S.util.ls(path) do
-       if name ~= '..' and name ~= '.' then
-         local combined_path = path .. '/' .. name
-         local file = {}
-         local stat = S.stat(combined_path)
-         if stat then
-         file.size = stat.size
-         file.isdir = stat.isdir
-         else
-           file.size = -1
-           file.isdir = false
-         end
-         file.path = combined_path
-         file.name = name
-
-         if not hide_dot or string.sub(file.name, 1, 1) ~= '.' then
-           if query == nil or query == '' then
-             table.insert(dir, file) 
-           else
-             if string.match(file.name, '^' .. query) then
-               table.insert(dir, file)
-             end
-           end
-         end
-       end
-    end
-
-    table.sort(dir, function (a,b) 
-      if a.isdir == false and b.isdir == true then
-        return false
-      elseif a.isdir == true and b.isdir == false then
-        return true
-      end
-      return a.name < b.name
-    end)
-
-    return dir
-end
 
 function human_size(size)
   if size < 1024 then
@@ -424,7 +449,6 @@ function draw_folder(mrg, path, currpath, details)
     cr:restore()
 end
 
-
 mrg:set_ui(
 function (mrg, data)
   local cr = mrg:cr()
@@ -435,23 +459,9 @@ function (mrg, data)
 
   if not stat then
     path_bar(mrg)
+    print ('not a statable path['..state.path..'] (remove this message if it isnt usedful now)')
   else
-    if stat.isdir then
-      x, y = mrg:xy()
-  
-      cleanup_child()
-      draw_folder(mrg, state.path, undefined, true)
-
-      cr:rectangle(0, y, mrg:width(), mrg:height())
-      mrg:listen(Mrg.DRAG, function(ev)
-         state.folder_pan = state.folder_pan + ev.delta_y
-         mrg:queue_draw(null)
-      end)
-      cr:new_path()
-      mrg:set_xy(0,0)
-      path_bar(mrg)
-
-    elseif stat.isreg then
+    if stat.isdir or stat.isreg then
 
       x, y = mrg:xy()
       draw_folder(mrg, state.folder, state.path, false)
@@ -461,6 +471,9 @@ function (mrg, data)
       mrg:set_edge_top(y)
 
       local mime_type = mime.for_path(state.path)
+      if stat.isdir then
+        mime_type = 'dir'
+      end
       local handler = mime_handler[mime_type]
 
       if handler then
@@ -495,6 +508,17 @@ function (mrg, data)
       mrg:queue_draw(nil)
     end )
   else
+    mrg:add_binding("left",      NULL, NULL, function (event)
+        go_parent()
+       event:stop_propagate()
+    end)
+    mrg:add_binding("right",      NULL, NULL, function (event)
+            print ('a')
+      set_path(state.path .. '/')
+      print('b')
+      mrg:queue_draw(nil)
+      event:stop_propagate()
+    end)
     mrg:add_binding("alt-left",      NULL, NULL, function (event)
         go_parent()
        event:stop_propagate()
@@ -577,7 +601,7 @@ function (mrg, data)
   for i, client in ipairs(clients) do 
     local w, h = client:size()
     local cx, cy = client:xy()
-    client:render(mrg, 8 * mrg:em(), mrg:em()*1.2)
+    client:render(mrg, Math.floor(8 * mrg:em()), Math.floor(mrg:em()*1.2))
     client:set_xy(8 * mrg:em(), y)
     client:set_size(mrg:width()-(8 * mrg:em()), mrg:height()-mrg:em()*1.2)
 
@@ -595,7 +619,6 @@ function (mrg, data)
         mrg:message('unhandled client message : ' .. message)
       end
     end
-
   end
 
   if state.child_focus then
@@ -617,15 +640,25 @@ function (mrg, data)
       store_state()
       cleanup_child ()
     end
-
   end)
 end)
 
-mime_handler['video/mpeg4']       = {execute='mmm-ffplay'}
-mime_handler['video/ogv']         = {execute='mmm-ffplay'}
-mime_handler['video/mpeg']        = {execute='mmm-ffplay'}
-mime_handler['video/theora']      = {execute='mmm-ffplay'}
 
+mrg:css_set(css)
+restore_state()
+
+mrg:add_timeout(23000, function()
+  if slideshow == true then
+    go_next()
+  end
+  return 1
+end)
+
+
+mime_handler['video/mpeg4']     = {execute='mmm-ffplay'}
+mime_handler['video/ogv']       = {execute='mmm-ffplay'}
+mime_handler['video/mpeg']      = {execute='mmm-ffplay'}
+mime_handler['video/theora']    = {execute='mmm-ffplay'}
 mime_handler['text/plain']      = {execute='mrl-text-editor'}
 --mime_handler['text/plain']      = {execute='mrl-text-editor2'}
 mime_handler['image/gif']       = {execute='mmm-gifplay' } -- , options='--loop=1000'}
@@ -642,17 +675,7 @@ if false then
   mime_handler['image/png']  = {cb=internal_image}
 end
 
-mrg:css_set(css)
-restore_state()
-
-mrg:add_timeout(23000, function()
-  if slideshow == true then
-    go_next()
-  end
-  return 1
-end)
-
+print ("[" .. state.path .. "]")
 mrg:main()
 cleanup_child()
 host:destroy()
-

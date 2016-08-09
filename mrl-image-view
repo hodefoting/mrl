@@ -58,6 +58,8 @@ function (mrg, data)
   local scale = 1.0;
   local dw, dh;
 
+  cr:set_source_rgb(0,0,0)
+  cr:paint()
     
   scale = (mrg:width ()) / w
   dw, dh = w * scale, h * scale

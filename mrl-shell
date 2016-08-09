@@ -35,7 +35,8 @@ local tiled = false
 local os     = require('os')
 local string = require('string')
 local Mrg    = require('mrg')
---local mrg    = Mrg.new(-1, -1);
+local Math   = require('math')
+local mrg    = Mrg.new(-1, -1);
 local mrg    = Mrg.new(1024, 768);
 local host   = mrg:host_new("/tmp/mrg")
 
@@ -161,6 +162,9 @@ mrg:set_ui(
     for i, client in ipairs(clients) do 
       local x, y = client:xy()
       local w, h = client:size()
+
+      x = Math.floor(x)
+      y = Math.floor(y)
 
       client:render(mrg, x, y)
 
