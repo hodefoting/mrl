@@ -2,7 +2,7 @@
 -- todo
 --   creating new (text) files
 --   text editing
---     mark modified and unsaved files in file browser, keep clients open, permitting multitask editing with minimal ui.
+--     mark modified and unsaved files in file browser, keep clients open, permitting multitask editing with minimalistic - what is on disk, driven ui.
 --     ask to save changes when trying to switch file or perhaps dir?
 --     run mrg- mmm- mrl- and luajit scripts directly
 --   open context menu with keyboard shortcut
@@ -92,6 +92,9 @@ function dispatch_child (handler, mime_type)
   end
   current_child_path = state.path
   cleanup_child()
+
+  print ('dispatch:  ' .. state.path .. ' :  '.. mime_type)
+
   mrg:add_timeout(0, function() mrg:queue_draw(nil) return 0 end)
 
   local childpid = S.fork()
@@ -519,7 +522,7 @@ function (mrg, data)
   mrg:add_binding("control-q", NULL, NULL, function (event) mrg:quit() end)
 
   if state.child_focus then
-    mrg:add_binding("meta", NULL, NULL, function (event) -- XXX: dunno if "meta" is valid binding
+    mrg:add_binding("tab", NULL, NULL, function (event) -- XXX: dunno if "meta" is valid binding
       state.child_focus = not state.child_focus
       mrg:queue_draw(nil)
     end )
@@ -591,6 +594,7 @@ function (mrg, data)
           end
         end
         local new = matches[1].name:sub(1, common)
+
         if state.query == new then
           state.child_focus = not state.child_focus
           mrg:queue_draw(nil)
@@ -598,6 +602,7 @@ function (mrg, data)
           state.query = new
           mrg:add_timeout(0, function() mrg:set_cursor_pos(#state.query) return 0 end)
         end
+
       end
       event:stop_propagate()
     end)
@@ -649,7 +654,8 @@ function (mrg, data)
     host:register_events()
   else
     cr:rectangle(8 * em, y, mrg:width() - 9 * em, mrg:height() - y)
-    mrg:listen(Mrg.PRESS, function(event) state.child_focus = true  end)
+    mrg:listen(Mrg.PRESS, function(event) state.child_focus = true  
+    end)
     cr:new_path()
   end
 
@@ -686,14 +692,15 @@ mime_handler['image/gif']       = {execute='mmm-gifplay' } -- , options='--loop=
 mime_handler['unknown']         = {execute='mrl-file-info'}
 mime_handler['text/mrl']        = {execute='luajit'}
 mime_handler['application/mmm'] = {execute='lua'}
-mime_handler['image/jpeg']      = {execute='mrl-image-view'}
-mime_handler['image/png']       = {execute='mrl-image-view'}
 mime_handler['image/svg']       = {execute='mrl-svg-view'}
 mime_handler['text/html']       = {execute='mrl-html-view'}
 
 if false then
   mime_handler['image/jpeg'] = {cb=internal_image}
   mime_handler['image/png']  = {cb=internal_image}
+else
+  mime_handler['image/jpeg']      = {execute='mrl-image-view'}
+  mime_handler['image/png']       = {execute='mrl-image-view'}
 end
 
 print ("[" .. state.path .. "]")
