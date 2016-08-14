@@ -78,7 +78,6 @@ function cleanup_child()
     S.kill(old_pid, 9)
     S.waitpid(old_pid)
     old_pid = 0
-    mrg:queue_draw(nil)
   end
 end
 
@@ -91,7 +90,7 @@ function dispatch_child (handler, mime_type)
     return   -- this is the reason some bugs can/could be worked around by setting a different item as active
   end
   current_child_path = state.path
-  cleanup_child()
+  -- cleanup_child()
 
   print ('dispatch:  ' .. state.path .. ' :  '.. mime_type)
 
@@ -100,9 +99,7 @@ function dispatch_child (handler, mime_type)
   local childpid = S.fork()
 
   if (childpid == 0) then    -- in child
-
     if mime_type == 'application/mmm' then
-
       if handler.options then
         S.execve(state.path,
                  {state.path, handler.options},
@@ -137,8 +134,9 @@ function dispatch_child (handler, mime_type)
     end
     S.exit()
   else                       -- in parent
+    cleanup_child()
     old_pid = childpid
-    S.nanosleep(0.1) -- XXX: eeek, avoiding construction race... needs fixing in mmm
+    S.nanosleep(0.09) -- XXX: eeek, avoiding construction race... needs fixing in mmm
   end
 end
 
@@ -169,6 +167,8 @@ function internal_image (handler)
   cr:clip()
   mrg:image(0, 0, dw, dh, state.path)
   cr:restore()
+
+  mrg:queue_draw(nil)
 end
 
 function store_state()
@@ -695,13 +695,13 @@ mime_handler['application/mmm'] = {execute='lua'}
 mime_handler['image/svg']       = {execute='mrl-svg-view'}
 mime_handler['text/html']       = {execute='mrl-html-view'}
 
-if false then
-  mime_handler['image/jpeg'] = {cb=internal_image}
-  mime_handler['image/png']  = {cb=internal_image}
-else
+--if false then
+--  mime_handler['image/jpeg'] = {cb=internal_image}
+--  mime_handler['image/png']  = {cb=internal_image}
+--else
   mime_handler['image/jpeg']      = {execute='mrl-image-view'}
   mime_handler['image/png']       = {execute='mrl-image-view'}
-end
+--end
 
 print ("[" .. state.path .. "]")
 mrg:main()
