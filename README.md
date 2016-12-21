@@ -1,8 +1,12 @@
 Microraptor lua
 
 lua bindings for microraptor gui, and a full multi-tasking user interface
-written using them. The files should be possible to run straight out of this
-directory with a system installed luajit.
+written using them. 
+
+[Watch a video of a live demonstration of micro raptor lua](https://www.youtube.com/watch?v=KsU3he_8nSE)
+
+The files should be possible to run straight out of this directory with a
+system installed luajit.
 
 Each of the executables can be run stand-alone, or under mrg, the
 mrg-text-editor is used by mrg-files for showing and editing text-files.
