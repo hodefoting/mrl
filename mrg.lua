@@ -68,6 +68,7 @@ enum _MrgType {
   MRG_KEY_UP         = 1 << 11,
   MRG_SCROLL         = 1 << 12,
   MRG_MESSAGE        = 1 << 13,
+  MRG_DROP           = 1 << 14,
 
   MRG_TAPS     = (MRG_TAP | MRG_TAP_AND_HOLD),
   MRG_POINTER  = (MRG_PRESS | MRG_MOTION | MRG_RELEASE),
@@ -281,7 +282,7 @@ struct _MrgEvent {
 
   /* only valid for key-events */
   unsigned int unicode;
-  const char *key_name; /* can be "up" "down" "space" "backspace" "a" "b" "ø" etc .. */
+  const char *string;   /* can be "up" "down" "space" "backspace" "a" "b" "ø" etc .. */
                         /* this is also where the message is delivered for
                          * MESSAGE events
                          */
@@ -887,7 +888,7 @@ ffi.metatype('Mrg', {__index = {
 ffi.metatype('MrgEvent',     {__index = { 
 
   stop_propagate = function (...) return C.mrg_event_stop_propagate (...) end,
-  message = function (event) return ffi.string(event.key_name) end,
+  message = function (event) return ffi.string(event.string) end,
 
 }})
 ffi.metatype('MrgColor',     {__index = { }})

@@ -133,6 +133,14 @@ function draw_piano(mrg, shape)
     radius1 = radius1 * foo
     radius0 = radius0 * foo
   end
+
+
+    mrg:listen(Mrg.KEY_DOWN, function(event,a,b)
+      lyd:note(100, 440.0, 1.0, 0.1)
+      mrg:queue_draw(NULL)
+      event:stop_propagate()
+    end)
+
 end
 
 function draw_circle_cursor (mrg)
