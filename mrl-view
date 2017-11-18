@@ -618,8 +618,6 @@ function (mrg, data)
     end)
   end
 
-  host:monitor_dir()
-
   local clients = host:clients()
   for i, client in ipairs(clients) do 
     local w, h = client:size()

@@ -147,7 +147,6 @@ mrg:set_ui(
 
     local old_focused = host:focused()
     -- host:set_focused(nil)  -- (render_sloppy sets focused as part of rendering)
-    host:monitor_dir()
 
     local clients = host:clients()
 
