@@ -124,7 +124,7 @@ const char * lyd_get_patch (Lyd *lyd, int no);
 
 void         lyd_set_patch (Lyd *lyd, int no, const char *patch);
 
-int          lyd_audio_init (Lyd *lyd, const char *driver);
+int          lyd_audio_init (Lyd *lyd, const char *driver, void *data);
 
 LydVoice *lyd_note (Lyd *lyd, int patch, float hz, float volume, float duration);
 
@@ -148,9 +148,9 @@ void lyd_reset_time (Lyd *lyd);
 
 ]]
 
-function M.new()
+function M.new(mmm)
   local lyd = ffi.gc(C.lyd_new(),C.lyd_free)
-  lyd:audio_init "auto"
+  lyd:audio_init("auto", mmm)
   return lyd
 end
 

@@ -34,6 +34,7 @@ void mrg_list_append (MrgList **list, void *data);
 void mrg_list_remove (MrgList **list, void *data);
 void mrg_list_free (MrgList **list);
 
+
 MrgList *mrg_list_nth (MrgList *list, int no);
 
 MrgList *mrg_list_find (MrgList *list, void *data);
@@ -107,6 +108,7 @@ void mrg_message (Mrg *mrg, const char *message);
 void  mrg_set_title     (Mrg *mrg, const char *title);
 void mrg_window_set_value (Mrg *mrg, const char *name, const char *value);
 const char *mrg_get_title (Mrg *mrg);
+void *mrg_mmm (Mrg *mrg);
 
 int   mrg_width         (Mrg *mrg);
 int   mrg_height        (Mrg *mrg);
@@ -717,6 +719,7 @@ ffi.metatype('Mrg', {__index = {
   set_ui           = function (mrg, uifun, uidata) C.mrg_set_ui(mrg, uifun, uidata) end,
   style            = function (...) return C.mrg_style (...) end;
   width            = function (...) return C.mrg_width (...) end,
+  mmm              = function (...) return C.mrg_mmm (...) end,
   height           = function (...) return C.mrg_height (...) end,
   pointer_x        = function (...) return C.mrg_pointer_x (...) end,
   pointer_y        = function (...) return C.mrg_pointer_y (...) end,
