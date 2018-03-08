@@ -32,7 +32,11 @@ function get_basename(path)
   return last
 end
 
-local thumb_path = get_path(path) .. '/.thumb/' .. get_basename(path)
+function get_thumb_path(path)
+  return get_path(path) .. '/.thumb/' .. get_basename(path)
+end
+
+local thumb_path = get_thumb_path(path)
 
 local initialized = false
 
@@ -42,10 +46,11 @@ mrg:set_ui(
 function (mrg, data)
 
   if (initialized == false) then
-    local stt = S.stat(thumb_path)
+    local stt = S.stat(get_thumb_path(path))
     if stt and stt.isreg then
       path = thumb_path
       thumb_done = true
+      print 'bbbbbb'
     end
     initialized = true;
   end
@@ -53,14 +58,15 @@ function (mrg, data)
   local cr = mrg:cr()
   local em = mrg:em()
 
-  local w, h = mrg:image_size(path)
+  local w, h;
   local cr = mrg:cr()
   local scale = 1.0;
   local dw, dh;
 
   cr:set_source_rgb(0,0,0)
   cr:paint()
-    
+
+  w, h = mrg:image_size(path)
   scale = (mrg:width ()) / w
   dw, dh = w * scale, h * scale
 
@@ -80,8 +86,14 @@ function (mrg, data)
   cr:restore()
 
   if (thumb_done== false) then
-    if mrg:width () > 512 then 
+    -- this writes a display sized preview image - but
+    -- only for images bigger than display size
+    --
+    -- with resizing, this cache gets size polluted
+    if mrg:width () < w then 
+      os.execute('mkdir ' .. get_path(path) .. '/.thumb ') --2> /dev/null' )
       cr:get_target():write_to_png(thumb_path)
+      print 'wwww'
       thumb_done=true
     end
   end

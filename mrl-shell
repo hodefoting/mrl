@@ -53,7 +53,7 @@ local applications = {
   {text='help',          command='mrg browser &'},
   {text='terminal',      command='mrg terminal&'},
   {text='flipping game', command=which('mrl-flipgame') .. ' &'},
-  {text='paddlewar',     command=which('mrl-game-paddlewar') .. ' &'},
+  {text='paddlewar',     command=which('mrl-paddlewar') .. ' &'},
 }
 
 function string.has_prefix(String,Start)

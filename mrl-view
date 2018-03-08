@@ -8,12 +8,16 @@
 --   open context menu with keyboard shortcut
 --   escape paths
 --   thumbnails
+--     thumbnails should be scaled stored rendered framebuffers
+--     thus making it seems like the viewer is already running
+--     in the thumbnail
+
 
 -- stick a .mrg file in each dir
 -- containing per filename extra information/cache
 -- order for custom order sort (useful for slideshows and playlists)
 -- position and size/rotation for 2d-view
--- use hardlinks when copying .jpg or .png or .mp3 files on the same file system,..
+-- use hardlinks when copying .jpg or .png or .mp3 files on the same file system to reduce disk usage overhead
 
 local S = require('syscall')
 
@@ -25,8 +29,8 @@ end
 
 local Math = require('math')
 local Mrg = require('mrg')
---local mrg = Mrg.new(512, 512);
-local mrg = Mrg.new(-1, -1);
+local mrg = Mrg.new(1024, 768);
+--local mrg = Mrg.new(-1, -1);
 local mime = require('mime')
 local mrl  = require('mrl')
 
@@ -40,8 +44,6 @@ local state={
   child_focus = false,
   folder_pan=0
 }
-
-
 
 local dir = {}
 local comp_dir = "/tmp/mrg-" .. S.getpid()
@@ -90,7 +92,7 @@ function dispatch_child (handler, mime_type)
     return   -- this is the reason some bugs can/could be worked around by setting a different item as active
   end
   current_child_path = state.path
-  -- cleanup_child()
+  cleanup_child()
 
   print ('dispatch:  ' .. state.path .. ' :  '.. mime_type)
 
@@ -382,6 +384,33 @@ function human_size(size)
   end
 end
 
+function get_path(path)
+  local t = {}
+  local newp = '';
+  for str in string.gmatch(path, "([^/]+)") do
+    t[#t+1] = str
+  end
+  for i = 1,#t-1 do
+    newp = newp .. '/' .. t[i]
+  end
+  if newp == '' then newp = '/' end
+  return newp
+end
+
+function get_basename(path)
+  local t = {}
+  local last = ''
+  for str in string.gmatch(path, "([^/]+)") do
+    t[#t+1] = str
+    last=str
+  end
+  return last
+end
+
+function get_thumb_path(path)
+  return get_path(path) .. '/.thumb/' .. get_basename(path)
+end
+
 function draw_folder(mrg, path, currpath, details)
     local cr = mrg:cr()
 
@@ -392,7 +421,6 @@ function draw_folder(mrg, path, currpath, details)
     dir = collect_dir (path, state.query)
 
     for i,file in pairs(dir) do
-
       if file and file.path:has_suffix('_')  then
       else
       mrg:text_listen(Mrg.TAP + Mrg.TAP_AND_HOLD,
@@ -431,15 +459,25 @@ function draw_folder(mrg, path, currpath, details)
                    os.execute(string.format('%s &', file.path))
                  end
              }
-
              -- per file context menu
-
              mrl.modal(mrg, event.device_x, event.device_y, menu)
              mrg:queue_draw(nil)
            end
            return 0;
          end)
-      local xml = "<div "
+
+      if string.match(file.path, '.JPG') then
+        local stt = S.stat(get_thumb_path(file.path))
+        if stt and stt.isreg then
+          mrg:image(mrg:x(), mrg:y() + mrg:em(), mrg:em()*8, mrg:em()*4,
+                 get_thumb_path(file.path))
+        end
+
+
+
+      end
+
+      local xml = "<div style='height:4em;'"
       if file.isdir then
         xml = xml .. "class='dentry' "
       else

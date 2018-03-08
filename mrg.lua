@@ -1,6 +1,5 @@
 -- ffi lua binding for microraptor gui by Øyvind Kolås, public domain
 --
---
 local ffi = require('ffi')
 local cairo = require('cairo')
 local C = ffi.load('mrg')
@@ -88,6 +87,10 @@ typedef enum _MrgType MrgType;
 typedef void (*MrgCb) (MrgEvent *event,
                        void     *data,
                        void     *data2);
+
+typedef void (*MrgLinkCb) (MrgEvent *event,
+                           const char *href,
+                           void     *data);
 
 typedef void(*MrgDestroyNotify) (void     *data);
 typedef int(*MrgTimeoutCb) (Mrg *mrg, void  *data);
@@ -185,7 +188,7 @@ int mrg_add_timeout_full (Mrg *mrg, int ms, MrgTimeoutCb idle_cb, void *idle_dat
 
 
 void  mrg_set_line_spacing (Mrg *mrg, float line_spacing);
-float mrg_line_spacing     (Mrg *mrg); 
+float mrg_line_spacing     (Mrg *mrg);
 
 int mrg_print (Mrg *mrg, const char *string);
 
@@ -193,6 +196,13 @@ int   mrg_print_get_xy     (Mrg *mrg, const char *str, int no, float *x, float *
 
 
 int mrg_print_xml (Mrg *mrg, const char *string);
+
+void mrg_xml_render (Mrg *mrg, const char *uri_base,
+                     MrgLinkCb linkcb,
+                     void *link_data,
+                     void   (*finalize)(void *listen_data, void *listen_data2,  void *finalize_data),
+                     void    *finalize_data,
+                     const char *html);
 
 void mrg_set_target_fps (Mrg *mrg, float fps);
 float mrg_get_target_fps (Mrg *mrg);
@@ -705,6 +715,32 @@ MrgBinding *mrg_get_bindings (Mrg *mrg);
 
 int mrg_parse_svg_path (Mrg *mrg, const char *str);
 
+
+
+
+typedef struct _MrgVT MrgVT;
+
+MrgVT      *mrg_vt_new                  (Mrg *mrg, const char *commandline);
+const char *mrg_vt_find_shell_command   (void);
+void        mrg_vt_poll                 (MrgVT *vt);
+long        mrg_vt_rev                  (MrgVT *vt);
+void        mrg_vt_destroy              (MrgVT *vt);
+void        mrg_vt_set_term_size        (MrgVT *vt, int cols, int rows);
+void        mrg_vt_feed_keystring       (MrgVT *vt, const char *str);
+void        mrg_vt_feed_byte            (MrgVT *vt, int byte);
+const char *mrg_vt_get_commandline      (MrgVT *vt);
+void        mrg_vt_set_scrollback_lines (MrgVT *vt, int scrollback_lines);
+int         mrg_vt_get_scrollback_lines (MrgVT *vt);
+int         mrg_vt_get_line_count       (MrgVT *vt);
+const char *mrg_vt_get_line             (MrgVT *vt, int no);
+int         mrg_vt_get_cols             (MrgVT *vt);
+int         mrg_vt_get_rows             (MrgVT *vt);
+int         mrg_vt_get_cursor_x         (MrgVT *vt);
+int         mrg_vt_get_cursor_y         (MrgVT *vt);
+int         mrg_vt_is_done              (MrgVT *vt);
+int         mrg_vt_get_result           (MrgVT *vt);
+
+void        mrg_vt_draw             (MrgVT *vt, Mrg *mrg, double x, double y, float font_size, float line_spacing);
 ]]
 
 function M.new(width,height, backend)
@@ -826,6 +862,20 @@ ffi.metatype('Mrg', {__index = {
   set_cursor_pos   = function (...) C.mrg_set_cursor_pos(...) end,
   print            = function (...) C.mrg_print(...) end,
   print_xml        = function (...) C.mrg_print_xml(...) end,
+
+  xml_render       = function (mrg, uri_base, link_cb, data, html)
+   local notify_fun, cb_fun;
+   local notify_cb = function (data, html, finalize_data)
+     cb_fun:free();
+     notify_fun:free();
+   end
+   local wrap_cb = function(event, href, data)
+      link_cb(event, ffi.string(href), data)
+   end
+   notify_fun = ffi.cast("MrgCb", notify_cb)
+   cb_fun = ffi.cast ("MrgLinkCb", wrap_cb)
+   return C.mrg_xml_render (mrg, uri_base, cb_fun, data, notify_fun, NULL, html)
+   end,
   cr               = function (...) return C.mrg_cr (...) end,
   width            = function (...) return C.mrg_width (...) end,
   height           = function (...) return C.mrg_height (...) end,
@@ -877,6 +927,9 @@ ffi.metatype('Mrg', {__index = {
   host_new = function (...) 
              return C.mrg_host_new(...)
   end,
+  vt_new = function (...) 
+             return C.mrg_vt_new (...)
+  end,
 
   remove_idle      = function (...) return C.mrg_remove_idle (...) end,
   edge_left        = function (...) return C.mrg_edge_left (...) end,
@@ -894,6 +947,30 @@ ffi.metatype('MrgEvent',     {__index = {
   message = function (event) return ffi.string(event.string) end,
 
 }})
+
+ffi.metatype('MrgVT', {__index = {
+  poll = function (...) C.mrg_vt_poll (...) end,
+  draw = function (...) C.mrg_vt_draw (...) end,
+  rev  = function (...) return C.mrg_vt_rev (...) end,
+  destroy = function (vt) C.mrg_vt_destroy (vt); ffi.gc (vt, nil) end,
+  set_term_size = function (...) C.mrg_vt_set_term_size (...) end,
+  feed_keystring = function (...) C.mrg_vt_feed_keystring (...) end,
+  feed_byte = function (...) C.mrg_vt_feed_byte (...) end,
+  is_done = function (...) return C.mrg_vt_is_done (...) end,
+  get_result = function (...) return C.mrg_vt_get_result (...) end,
+  get_scrollback_lines = function (...) return C.mrg_vt_get_scrollback_lines (...) end,
+  set_scrollback_lines = function (...) C.mrg_vt_set_scrollback_lines (...) end,
+  get_commandline = function (...) return C.mrg_vt_get_commandline (...) end,
+  get_line_count = function (...) return C.mrg_vt_get_line_count (...) end,
+  get_line = function (...) return C.mrg_vt_get_line (...) end,
+  get_cols = function (...) return C.mrg_vt_get_cols (...) end,
+  get_rows = function (...) return C.mrg_vt_get_rows (...) end,
+  get_cursor_x = function (...) return C.mrg_vt_get_cursor_x (...) end,
+  get_cursor_y = function (...) return C.mrg_vt_get_cursor_y (...) end,
+
+}})
+
+
 ffi.metatype('MrgColor',     {__index = { }})
 ffi.metatype('MrgStyle',     {__index = { }})
 ffi.metatype('MrgRectangle', {__index = { }})
@@ -974,12 +1051,16 @@ ffi.metatype('MrgClient',    {__index = {
   M.DRAG_MOTION = C.MRG_DRAG_MOTION;
   M.DRAG_PRESS = C.MRG_DRAG_PRESS;
   M.DRAG_RELEASE = C.MRG_DRAG_RELEASE;
+  M.SCROLL = C.MRG_SCROLL;
   M.MESSAGE= C.MRG_MESSAGE;
   M.DRAG = C.MRG_DRAG;
   M.ANY = C.MRG_ANY;
   M.KEY = C.MRG_KEY;
   M.COORD = C.MRG_COORD;
 
+
+  M.SCROLL_DIRECTION_UP = C.MRG_SCROLL_DIRECTION_UP
+  M.SCROLL_DIRECTION_DOWN = C.MRG_SCROLL_DIRECTION_DOWN
 
 local keyboard_visible = false
 --local keyboard_visible = true
@@ -1168,7 +1249,7 @@ M.draw_keyboard = function (mrg)
   cr:new_path()
   if not keyboard_visible then
     cr:rectangle (mrg:width() - 4 * em, mrg:height() - 3 * em, 4 * em, 3 * em)
-    mrg:listen(M.TAP, function(event) 
+    mrg:listen(M.TAP, function(event)
       keyboard_visible = true
       mrg:queue_draw(nil)
     end)
@@ -1222,7 +1303,7 @@ M.draw_keyboard = function (mrg)
       cr:stroke_preserve()
       if v.type == 'modal' then
 
-        mrg:listen(M.TAP, function(event)
+        mrg:listen(M.RELEASE, function(event)
           if v.isshift then
             shifted = not shifted
             v.active = shifted
@@ -1294,6 +1375,5 @@ M.draw_keyboard = function (mrg)
     cr:new_path()
   end
 end
-
 
 return M

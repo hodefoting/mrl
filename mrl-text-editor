@@ -41,7 +41,7 @@ function (mrg, data)
   mrg:set_edge_left (1.0 * em)
   mrg:set_edge_right (mrg:width()-1.0 * em)
   mrg:set_edge_top (1.0 * em) -- setting top causes a cursor reset, so do it after left
-  
+
   mrg:set_style('color:black;font-size:20;font-family:mono')
 
   -- check if cursor is above or below screen
