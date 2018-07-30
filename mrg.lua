@@ -107,11 +107,11 @@ void  mrg_set_size      (Mrg *mrg, int width, int height);
 void  mrg_set_position  (Mrg *mrg, int x, int y);
 void  mrg_get_position  (Mrg *mrg, int *x, int *y);
 
-void mrg_message (Mrg *mrg, const char *message);
-void  mrg_set_title     (Mrg *mrg, const char *title);
-void mrg_window_set_value (Mrg *mrg, const char *name, const char *value);
-const char *mrg_get_title (Mrg *mrg);
-void *mrg_mmm (Mrg *mrg);
+void  mrg_message           (Mrg *mrg, const char *message);
+void  mrg_set_title         (Mrg *mrg, const char *title);
+void  mrg_window_set_value  (Mrg *mrg, const char *name, const char *value);
+const char *mrg_get_title   (Mrg *mrg);
+void *mrg_mmm               (Mrg *mrg);
 
 int   mrg_width         (Mrg *mrg);
 int   mrg_height        (Mrg *mrg);
@@ -631,6 +631,15 @@ float  mrg_line_height (Mrg *mrg);
 
 /* XXX: doesnt feel like it belongs here */
 void mrg_image (Mrg *mrg, float x0, float y0, float width, float height, const char *path);
+void mrg_image_memory (Mrg *mrg, float x0, float y0, float width, float height, const char *data, int length, const char *eid);
+
+MrgImage *mrg_query_image_memory (Mrg *mrg,
+                                  const char *contents,
+                                  int         length,
+                                  const char *eid,
+                                  int        *width,
+                                  int        *height);
+
 
 int mrg_get_cursor_pos  (Mrg *mrg);
 void mrg_set_cursor_pos (Mrg *mrg, int pos);
@@ -762,6 +771,7 @@ ffi.metatype('Mrg', {__index = {
   text_listen_done = function (...) C.mrg_text_listen_done(...) end,
   warp_pointer     = function (...) C.mrg_warp_pointer(...) end,
   quit             = function (...) C.mrg_quit(...) end,
+  image_memory     = function (...) C.mrg_image_memory(...) end,
   image            = function (...) C.mrg_image(...) end,
   render_pdf       = function (...) C.mrg_render_pdf(...) end,
   render_svg       = function (...) C.mrg_render_svg(...) end,
@@ -777,6 +787,16 @@ ffi.metatype('Mrg', {__index = {
     rw[0] = -1
     rh[0] = -1
     C.mrg_query_image (mrg, path, rw, rh)
+    return rw[0], rh[0]
+  end,
+
+
+  image_size_memory       = function (mrg, data, len, eid)
+    local rw = ffi.new'int[1]'
+    local rh = ffi.new'int[1]'
+    rw[0] = -1
+    rh[0] = -1
+    C.mrg_query_image_memory (mrg, data,len,eid, rw, rh)
     return rw[0], rh[0]
   end,
 
@@ -1234,6 +1254,8 @@ local shifted = false
 local alted = false
 local ctrld = false
 local fnd = false
+local px = 0
+local py = 0
 
 M.draw_keyboard = function (mrg)
   local em = 20
@@ -1249,7 +1271,7 @@ M.draw_keyboard = function (mrg)
   cr:new_path()
   if not keyboard_visible then
     cr:rectangle (mrg:width() - 4 * em, mrg:height() - 3 * em, 4 * em, 3 * em)
-    mrg:listen(M.TAP, function(event)
+    mrg:listen(M.TAP+M.RELEASE, function(event)
       keyboard_visible = true
       mrg:queue_draw(nil)
     end)
@@ -1265,7 +1287,11 @@ M.draw_keyboard = function (mrg)
 
     cr:rectangle(0,y_start,620,166)
     cr:set_source_rgba(bg.r,bg.g,bg.b,0.6)
-    mrg:listen(M.COORD, function(e) e:stop_propagate() end)
+    mrg:listen(M.COORD, function(e) 
+        px = e.x;
+        py = e.y;
+        mrg:queue_draw(nil)
+       e:stop_propagate() end)
     cr:fill()
 
     for k,v in ipairs(keys) do
@@ -1276,7 +1302,9 @@ M.draw_keyboard = function (mrg)
       else
         cr:arc (v.x, v.y, em, 0, 3.1415*2)
       end
-      mrg:listen(M.TAP, function(event)
+      mrg:listen(M.TAP+M.RELEASE, function(event)
+        px = event.x;
+        py = event.y;
         if v.type == 'keyboard' then
           keyboard_visible = false
         elseif (not v.isshift) and (v.label ~= 'Fn') and (v.label ~= 'ctrl') then
@@ -1294,7 +1322,7 @@ M.draw_keyboard = function (mrg)
         mrg:queue_draw(nil)
         event:stop_propagate()
       end)
-      if v.active then
+      if v.active or cr:in_fill(px,py) then
         cr:set_source_rgba (bg.r,bg.g,bg.b,0.8)
       else
         cr:set_source_rgba (fg.r,fg.g,fg.b,0.8)
@@ -1303,7 +1331,7 @@ M.draw_keyboard = function (mrg)
       cr:stroke_preserve()
       if v.type == 'modal' then
 
-        mrg:listen(M.RELEASE, function(event)
+        mrg:listen(M.TAP+M.RELEASE, function(event)
           if v.isshift then
             shifted = not shifted
             v.active = shifted
@@ -1332,10 +1360,10 @@ M.draw_keyboard = function (mrg)
         end
 
       end
-      if v.active then
-        cr:set_source_rgba (fg.r,fg.g,fg.b,0.4)
+      if v.active or cr:in_fill(px,py) then
+        cr:set_source_rgba (fg.r,fg.g,fg.b,0.5)
       else
-        cr:set_source_rgba (bg.r,bg.g,bg.b,0.4)
+        cr:set_source_rgba (bg.r,bg.g,bg.b,0.5)
       end
       cr:fill ()
       cr:move_to (v.x - 6, v.y + 4)

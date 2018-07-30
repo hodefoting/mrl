@@ -33,7 +33,6 @@ local mrg = Mrg.new(1024, 768);
 --local mrg = Mrg.new(-1, -1);
 local mime = require('mime')
 local mrl  = require('mrl')
-
 local mime_handler = {} -- go to the bottom of the file to see the list of
                         -- mimehandlers
 
