@@ -630,8 +630,8 @@ void  mrg_set_font_size (Mrg *mrg, float font_size);
 float  mrg_line_height (Mrg *mrg);
 
 /* XXX: doesnt feel like it belongs here */
-void mrg_image (Mrg *mrg, float x0, float y0, float width, float height, const char *path);
-void mrg_image_memory (Mrg *mrg, float x0, float y0, float width, float height, const char *data, int length, const char *eid);
+void mrg_image (Mrg *mrg, float x0, float y0, float width, float height, const char *path, int *used_width, int *used_height);
+void mrg_image_memory (Mrg *mrg, float x0, float y0, float width, float height, const char *data, int length, const char *eid, int *used_width, int *used_height);
 
 MrgImage *mrg_query_image_memory (Mrg *mrg,
                                   const char *contents,
@@ -675,7 +675,7 @@ MrgHost   *mrg_host_new              (Mrg *mrg, const char *path);
 void       mrg_host_destroy          (MrgHost *host);
 void       mrg_host_set_focused      (MrgHost *host, MrgClient *client);
 MrgClient *mrg_host_get_focused      (MrgHost *host);
-void       mrg_host_monitor_dir      (MrgHost *host);
+MrgClient *mrg_host_monitor_dir      (MrgHost *host);
 void       mrg_host_register_events  (MrgHost *host);
 MrgList   *mrg_host_clients          (MrgHost *host);
 
@@ -771,7 +771,18 @@ ffi.metatype('Mrg', {__index = {
   text_listen_done = function (...) C.mrg_text_listen_done(...) end,
   warp_pointer     = function (...) C.mrg_warp_pointer(...) end,
   quit             = function (...) C.mrg_quit(...) end,
-  image_memory     = function (...) C.mrg_image_memory(...) end,
+  image_memory = function (mrg, x, y, w, h, data, len, eid)
+    local rw = ffi.new'int[1]'
+    local rh = ffi.new'int[1]'
+    C.mrg_image_memory(mrg, x, y, w, h, data, len, eid, rw, rh)
+    return rw[0], rh[0]
+  end,
+  image = function (mrg, x, y, w, h, path)
+    local rw = ffi.new'int[1]'
+    local rh = ffi.new'int[1]'
+    C.mrg_image (mrg, x, y, w, h, path, rw, rh)
+    return rw[0], rh[0]
+  end,
   image            = function (...) C.mrg_image(...) end,
   render_pdf       = function (...) C.mrg_render_pdf(...) end,
   render_svg       = function (...) C.mrg_render_svg(...) end,
@@ -780,6 +791,11 @@ ffi.metatype('Mrg', {__index = {
   message          = function (...) C.mrg_message(...) end,
   parse_svg_path   = function (...) return C.mrg_parse_svg_path(...) end,
   clear_bindings = function (...) C.mrg_clear_bindings(...) end,
+
+
+  stylesheet_add = function(...) C.mrg_stylesheet_add(...) end,
+  stylesheet_clear = function(...) C.mrg_stylesheet_clear(...) end,
+
 
   image_size       = function (mrg, path)
     local rw = ffi.new'int[1]'
@@ -1000,7 +1016,7 @@ ffi.metatype('MrgHost',      {__index = {
   -- get_default_size not bound until needed
   set_focused     = function (...) C.mrg_host_set_focused (...) end,
   focused         = function (...) return C.mrg_host_get_focused (...) end,
-  monitor_dir     = function (...) C.mrg_host_monitor_dir (...) end,
+  monitor_dir     = function (...) return C.mrg_host_monitor_dir (...) end,
   register_events = function (...) C.mrg_host_register_events (...) end,
   destroy         = function (...) C.mrg_host_destroy (...) end,
   clients         = function (...) 
@@ -1082,7 +1098,7 @@ ffi.metatype('MrgClient',    {__index = {
   M.SCROLL_DIRECTION_UP = C.MRG_SCROLL_DIRECTION_UP
   M.SCROLL_DIRECTION_DOWN = C.MRG_SCROLL_DIRECTION_DOWN
 
-local keyboard_visible = false
+keyboard_visible = false
 --local keyboard_visible = true
 
 
